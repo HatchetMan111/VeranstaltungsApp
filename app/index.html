@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Event-Karte</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="style.css">
+<meta name="theme-color" content="#c9822b">
+</head>
+<body>
+  <header id="header">
+    <h1 id="event-title">Lädt…</h1>
+    <button id="filter-toggle" aria-label="Ausstellerliste anzeigen">☰</button>
+  </header>
+
+  <div id="map"></div>
+
+  <aside id="sidebar" hidden>
+    <h2>Aussteller</h2>
+    <ul id="exhibitor-list"></ul>
+  </aside>
+
+  <div id="offline-badge" hidden>Offline – Karte läuft aus dem Cache</div>
+  <footer>Umgesetzt von LichtValleyApps</footer>
+
+  <script src="vendor/leaflet.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

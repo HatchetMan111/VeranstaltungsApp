@@ -1,0 +1,39 @@
+:root {
+  --accent: #c9822b;
+  --text: #1a1a1a;
+  --bg: #ffffff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, sans-serif; color: var(--text); }
+
+#header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 1rem; background: var(--accent); color: #fff;
+}
+#header h1 { font-size: 1.1rem; margin: 0; }
+#filter-toggle { background: none; border: none; color: #fff; font-size: 1.4rem; line-height: 1; cursor: pointer; }
+
+#map { position: absolute; top: 3rem; bottom: 2rem; left: 0; right: 0; }
+
+#sidebar {
+  position: absolute; top: 3rem; bottom: 2rem; right: 0; z-index: 999;
+  width: min(85vw, 320px); background: var(--bg); overflow-y: auto;
+  box-shadow: -2px 0 6px rgba(0,0,0,.15); padding: 1rem;
+}
+#sidebar[hidden] { display: none; }
+#exhibitor-list { list-style: none; margin: 0; padding: 0; }
+#exhibitor-list li { padding: .6rem .2rem; border-bottom: 1px solid #eee; cursor: pointer; }
+#exhibitor-list li:active { background: #f5f5f5; }
+
+#offline-badge {
+  position: absolute; bottom: 2.3rem; left: 50%; transform: translateX(-50%);
+  z-index: 1000; background: #333; color: #fff; font-size: .75rem;
+  padding: .3rem .7rem; border-radius: 1rem;
+}
+
+footer {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2rem;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .7rem; color: #888; background: #fafafa;
+}
