@@ -46,6 +46,19 @@ pct push "$CTID" "$SCRIPT_DIR/nginx-event.conf" /etc/nginx/sites-available/event
 pct exec "$CTID" -- ln -sf /etc/nginx/sites-available/event /etc/nginx/sites-enabled/event
 pct exec "$CTID" -- systemctl reload nginx
 
+IP=""
+for i in $(seq 1 15); do
+  IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
+  [[ -n "$IP" ]] && break
+  sleep 2
+done
+
 echo "LXC $CTID ($HOSTNAME) ist bereit."
+if [[ -n "$IP" ]]; then
+  echo "Dashboard: http://${IP}/"
+  echo "Bearbeiten: pct enter $CTID   (Dateien unter /var/www/event)"
+else
+  echo "Konnte IP nicht automatisch ermitteln, siehe: pct exec $CTID -- hostname -I"
+fi
 echo "Nächster Schritt: ./deploy-event.sh $CTID events/<eventordner>"
 echo "Für Wiederverwendung: pct template $CTID  (danach per 'pct clone' pro neuem Auftrag vervielfältigen)"

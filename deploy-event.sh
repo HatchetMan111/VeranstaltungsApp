@@ -33,3 +33,9 @@ tar -C "$WORKDIR" -cf - . | pct exec "$CTID" -- tar -C /var/www/event -xf -
 pct exec "$CTID" -- systemctl reload nginx
 
 echo "Event '$EVENT_NAME' auf LXC $CTID deployt."
+
+IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
+if [[ -n "$IP" ]]; then
+  echo "Dashboard: http://${IP}/"
+  echo "Bearbeiten: pct enter $CTID   (Dateien unter /var/www/event)"
+fi
