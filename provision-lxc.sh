@@ -11,9 +11,16 @@ HOSTNAME="${2:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
 # ponytail: feste Defaults statt Config-Datei für Werte, die sich praktisch nie ändern.
 # Bei Bedarf hier direkt anpassen.
 STORAGE="local-lvm"
-TEMPLATE="local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst"
+TEMPLATE_FILE="debian-12-standard_12.7-1_amd64.tar.zst"
+TEMPLATE="local:vztmpl/${TEMPLATE_FILE}"
 BRIDGE="vmbr0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! pveam list local 2>/dev/null | grep -q "$TEMPLATE_FILE"; then
+  echo "Debian-12-Template fehlt, lade herunter…"
+  pveam update -q
+  pveam download local "$TEMPLATE_FILE"
+fi
 
 pct create "$CTID" "$TEMPLATE" \
   --hostname "$HOSTNAME" \

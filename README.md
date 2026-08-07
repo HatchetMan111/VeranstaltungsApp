@@ -4,7 +4,21 @@ Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdem�
 Pro Auftrag wird nur `config.json`, `exhibitors.geojson` und der `tiles/`-Ordner
 ausgetauscht – die App selbst bleibt gleich.
 
-## Einmalig: LXC anlegen
+## Einzeiler-Install (Proxmox-Host)
+
+Auf der Proxmox-Host-Shell einfügen:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HatchetMan111/VeranstaltungsApp/main/install.sh)"
+```
+
+Klont das Repo nach `/opt/veranstaltungsapp`, lädt bei Bedarf das Debian-12-Template,
+legt den LXC mit der nächsten freien CTID an und installiert nginx darin. Fragt nur nach
+dem Hostnamen. Danach weiter bei "Pro Auftrag: Event individualisieren" unten.
+
+## Manuell: LXC anlegen
+
+Falls das Repo bereits lokal liegt (z. B. schon mal per Einzeiler installiert):
 
 ```bash
 ./provision-lxc.sh 150 pferdemarkt-template
