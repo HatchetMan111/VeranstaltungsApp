@@ -3,17 +3,17 @@
   "features": [
     {
       "type": "Feature",
-      "properties": { "name": "Hufschmiede Schmidt", "description": "Vorführung Hufbeschlag – Stand 12" },
+      "properties": { "id": "hufschmiede-schmidt", "name": "Hufschmiede Schmidt", "description": "Vorführung Hufbeschlag – Stand 12" },
       "geometry": { "type": "Point", "coordinates": [9.7815, 49.4875] }
     },
     {
       "type": "Feature",
-      "properties": { "name": "Sattlerei Berger", "description": "Lederwaren & Reitzubehör – Stand 7" },
+      "properties": { "id": "sattlerei-berger", "name": "Sattlerei Berger", "description": "Lederwaren & Reitzubehör – Stand 7" },
       "geometry": { "type": "Point", "coordinates": [9.7820, 49.4878] }
     },
     {
       "type": "Feature",
-      "properties": { "name": "Imbiss Zur Trense", "description": "Deftige Küche, Kaffee & Kuchen – Stand 3" },
+      "properties": { "id": "imbiss-zur-trense", "name": "Imbiss Zur Trense", "description": "Deftige Küche, Kaffee & Kuchen – Stand 3" },
       "geometry": { "type": "Point", "coordinates": [9.7808, 49.4872] }
     }
   ]

@@ -1,20 +1,19 @@
 # Event-Aussteller-Karte – LXC-Vorlage
 
-Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdemärkte).
-Pro Auftrag wird nur `config.json`, `exhibitors.geojson` und der `tiles/`-Ordner
-ausgetauscht – die App selbst bleibt gleich.
+Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdemärkte),
+plus ein geschütztes **Admin-Dashboard**, über das sich Eventname, Farbe, Kartenausschnitt
+und alle Aussteller direkt im Browser bearbeiten lassen — keine Dateibearbeitung per SSH
+mehr nötig.
 
 ## Einzeiler-Install (Proxmox-Host)
-
-Auf der Proxmox-Host-Shell einfügen:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HatchetMan111/VeranstaltungsApp/main/install.sh)"
 ```
 
 Klont das Repo nach `/opt/veranstaltungsapp`, lädt bei Bedarf das Debian-12-Template,
-legt den LXC mit der nächsten freien CTID an und installiert nginx darin. Fragt nur nach
-dem Hostnamen. Danach weiter bei "Pro Auftrag: Event individualisieren" unten.
+legt den LXC mit der nächsten freien CTID an und installiert Node.js darin. Fragt nur
+nach dem Hostnamen. Der Dienst läuft danach noch **nicht** — das ist Absicht, siehe unten.
 
 ## Manuell: LXC anlegen
 
@@ -24,28 +23,46 @@ Falls das Repo bereits lokal liegt (z. B. schon mal per Einzeiler installiert):
 ./provision-lxc.sh 150 pferdemarkt-template
 ```
 
-Danach als Proxmox-Vorlage sichern, um pro neuem Auftrag schnell zu klonen:
-
-```bash
-pct template 150
-pct clone 150 151 --hostname pferdemarkt-musterstadt
-```
-
 ## Pro Auftrag: Event individualisieren
 
 1. Ordner kopieren: `cp -r events/beispiel-pferdemarkt events/<neuer-auftrag>`
-2. `config.json` anpassen: Eventname, Farbe, Kartenmittelpunkt, `bounds` (Süd/West, Nord/Ost)
-3. `exhibitors.geojson` mit den echten Ständen befüllen (Name, Beschreibung, Koordinaten)
+2. `config.json` anpassen: Eventname, Farbe, Kartenmittelpunkt, `bounds` (Süd/West, Nord/Ost) —
+   das sind nur die Startwerte, alles Weitere läuft über das Admin-Dashboard
+3. `exhibitors.geojson` optional mit Startdaten befüllen (kann auch leer bleiben und komplett
+   über das Dashboard gepflegt werden)
 4. `tiles/` mit den Kartenkacheln für genau den `bounds`-Ausschnitt befüllen (siehe unten)
-5. `vendor/icon-192.png` / `icon-512.png` im Eventordner ablegen, falls ein eigenes Logo gewünscht ist – sonst bleiben die Standard-Icons
-6. Deployen:
+5. Deployen:
 
 ```bash
 ./deploy-event.sh 151 events/<neuer-auftrag>
 ```
 
-Der Service Worker liest `bounds`/`minZoom`/`maxZoom` aus `config.json` und cacht beim ersten
-Laden automatisch genau die dazu passenden Kacheln – kein manuelles Kachel-Manifest nötig.
+Am Ende erscheint eine deutlich hervorgehobene Zusammenfassung:
+
+```
+✔ Event 'Pferdemarkt Musterstadt 2026' ist live
+────────────────────────────────────────────────────
+  Dashboard (Besucher):  http://192.168.1.42/
+  Admin (Bearbeiten):    http://192.168.1.42/admin
+  Login:                 admin / xK9mP2qLtR7w
+
+  Passwort jetzt notieren – wird nicht erneut angezeigt. Neu setzen:
+    ./deploy-event.sh 151 events/<neuer-auftrag> <neues-passwort>
+────────────────────────────────────────────────────
+```
+
+## Admin-Dashboard
+
+Unter `/admin` (HTTP-Basic-Auth, Login siehe oben) lässt sich bearbeiten:
+
+- Eventname und Akzentfarbe
+- Kartenmitte und der Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
+- Aussteller: hinzufügen (auf Karte klicken → Formular ausfüllen), Position ändern,
+  Name/Beschreibung bearbeiten, löschen
+
+Änderungen wirken sofort auf der Besucher-Karte — kein erneutes Deployen nötig. Für die
+Admin-Karte werden Live-OSM-Kacheln genutzt (Internet vorausgesetzt); die Besucher-Karte
+läuft weiterhin komplett offline mit dem vorbereiteten Tile-Paket.
 
 ## Kartenkacheln erzeugen (nicht Teil dieses Pakets)
 
@@ -60,7 +77,15 @@ Tunnel läuft bereits. Nur eine neue Ingress-Regel in der bestehenden `cloudflar
 ergänzen (Hostname → interne IP:80 des LXC) plus passenden DNS-CNAME. Container selbst
 bleibt auf HTTP, TLS übernimmt Cloudflare an der Edge.
 
+## Architektur
+
+Node.js + Express, ein einziger Prozess (systemd-Service `veranstaltungsapp`, läuft als
+unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Daten liegen als
+`config.json` / `exhibitors.geojson` auf der Container-Platte, keine Datenbank. Kein nginx
+mehr nötig — Express liefert Besucher-Seite, Admin-Dashboard und API aus einem Prozess.
+
 ## Dimensionierung
 
-1 vCPU, 512 MB RAM, 4 GB Disk – reiner Static-File-Server, kein Backend, keine Datenbank.
-Bei 1.000–2.000 Besuchern über einen Tag großzügig bemessen.
+1 vCPU, 512 MB RAM, 4 GB Disk. Bei 1.000–2.000 Besuchern über einen Tag großzügig bemessen —
+die Last ist ein kurzer Download-Peak (App-Shell + Kacheln einmalig pro Gerät), kein
+Dauerbetrieb mit hoher Schreiblast.

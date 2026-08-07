@@ -1,20 +1,22 @@
 #!/usr/bin/env bash
 # provision-lxc.sh <CTID> <hostname>
 # Einmalig auf dem Proxmox-Host ausführen. Legt einen schlanken LXC an,
-# installiert nginx als reinen Static-File-Server. Danach als Proxmox-Template
-# klonen (siehe README), statt für jedes Event neu zu provisionieren.
+# installiert Node.js und richtet den Systemd-Service ein. Der Service wird
+# nur aktiviert, nicht gestartet — das passiert erst mit dem ersten
+# ./deploy-event.sh, wenn tatsächlich Daten und Admin-Passwort vorhanden sind.
+# Danach als Proxmox-Template klonen (siehe README) statt für jedes Event neu
+# zu provisionieren.
 set -euo pipefail
 
 CTID="${1:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
 HOSTNAME="${2:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
 
-# ponytail: feste Defaults statt Config-Datei für Werte, die sich praktisch nie ändern.
-# Bei Bedarf hier direkt anpassen.
 STORAGE="local-lvm"
 TEMPLATE_FILE="debian-12-standard_12.7-1_amd64.tar.zst"
 TEMPLATE="local:vztmpl/${TEMPLATE_FILE}"
 BRIDGE="vmbr0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/common.sh"
 
 if ! pveam list local 2>/dev/null | grep -q "$TEMPLATE_FILE"; then
   echo "Debian-12-Template fehlt, lade herunter…"
@@ -35,16 +37,19 @@ pct create "$CTID" "$TEMPLATE" \
 
 sleep 5  # kurz warten, bis Netzwerk im Container steht
 
-pct exec "$CTID" -- bash -c "
+pct exec "$CTID" -- bash -c '
+  set -e
   apt-get update -qq
-  apt-get install -y --no-install-recommends nginx
-  rm -f /etc/nginx/sites-enabled/default
+  apt-get install -y -qq --no-install-recommends nodejs npm
+  id -u appuser &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin appuser
+  setcap "cap_net_bind_service=+ep" "$(readlink -f "$(command -v node)")"
   mkdir -p /var/www/event
-"
+  chown -R appuser:appuser /var/www/event
+'
 
-pct push "$CTID" "$SCRIPT_DIR/nginx-event.conf" /etc/nginx/sites-available/event
-pct exec "$CTID" -- ln -sf /etc/nginx/sites-available/event /etc/nginx/sites-enabled/event
-pct exec "$CTID" -- systemctl reload nginx
+pct push "$CTID" "$SCRIPT_DIR/veranstaltungsapp.service" /etc/systemd/system/veranstaltungsapp.service
+pct exec "$CTID" -- systemctl daemon-reload
+pct exec "$CTID" -- systemctl enable -q veranstaltungsapp
 
 IP=""
 for i in $(seq 1 15); do
@@ -53,12 +58,11 @@ for i in $(seq 1 15); do
   sleep 2
 done
 
-echo "LXC $CTID ($HOSTNAME) ist bereit."
-if [[ -n "$IP" ]]; then
-  echo "Dashboard: http://${IP}/"
-  echo "Bearbeiten: pct enter $CTID   (Dateien unter /var/www/event)"
-else
-  echo "Konnte IP nicht automatisch ermitteln, siehe: pct exec $CTID -- hostname -I"
-fi
-echo "Nächster Schritt: ./deploy-event.sh $CTID events/<eventordner>"
-echo "Für Wiederverwendung: pct template $CTID  (danach per 'pct clone' pro neuem Auftrag vervielfältigen)"
+banner "LXC $CTID ($HOSTNAME) ist bereit" \
+  "Läuft noch nicht — der Service startet erst mit dem ersten Deploy." \
+  "" \
+  "Nächster Schritt:" \
+  "  cd $SCRIPT_DIR && ./deploy-event.sh $CTID events/<eventordner>" \
+  "" \
+  "Für Wiederverwendung als Vorlage:" \
+  "  pct template $CTID   (danach per 'pct clone' pro Auftrag vervielfältigen)"

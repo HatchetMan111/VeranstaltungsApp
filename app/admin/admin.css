@@ -1,0 +1,53 @@
+:root { --accent: #c9822b; }
+* { box-sizing: border-box; }
+body { margin: 0; font-family: system-ui, -apple-system, sans-serif; color: #1a1a1a; padding-bottom: 3rem; }
+
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .9rem 1.2rem; background: #1a1a1a; color: #fff;
+}
+header h1 { font-size: 1.1rem; margin: 0; }
+header a { color: #ffd234; text-decoration: none; font-size: .85rem; }
+
+section { padding: 1rem 1.2rem; border-bottom: 1px solid #eee; }
+h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .04em; color: #666; margin: 0 0 .8rem; }
+
+label { display: block; margin-bottom: .7rem; font-size: .9rem; }
+input[type=text], textarea {
+  display: block; width: 100%; max-width: 420px; margin-top: .3rem;
+  padding: .5rem .6rem; border: 1px solid #ccc; border-radius: 6px; font-size: .95rem;
+}
+input[type=color] { margin-top: .3rem; width: 60px; height: 34px; border: none; padding: 0; }
+
+.map-tools { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }
+button.tool {
+  background: #f0f0f0; border: 1px solid #ccc; border-radius: 6px;
+  padding: .5rem .8rem; font-size: .85rem; cursor: pointer;
+}
+button.tool.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary {
+  background: var(--accent); color: #fff; border: none; border-radius: 6px;
+  padding: .6rem 1.1rem; font-size: .9rem; cursor: pointer;
+}
+button { font-family: inherit; }
+
+.hint { font-size: .8rem; color: #888; max-width: 480px; }
+.status { margin-left: .8rem; font-size: .85rem; }
+.status.ok { color: #2e7d32; }
+.status.err { color: #c62828; }
+
+#map-section { padding: 0; border-bottom: none; }
+#admin-map { height: 45vh; min-height: 320px; }
+
+#exhibitor-admin-list { list-style: none; margin: .8rem 0 0; padding: 0; max-width: 480px; }
+#exhibitor-admin-list li {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: .6rem 0; border-bottom: 1px solid #eee; font-size: .9rem;
+}
+#exhibitor-admin-list button { background: none; border: none; color: #888; cursor: pointer; font-size: .8rem; margin-left: .6rem; }
+#exhibitor-admin-list button.delete { color: #c62828; }
+
+#exhibitor-form {
+  position: fixed; bottom: 0; left: 0; right: 0; background: #fff;
+  border-top: 2px solid var(--accent); padding: 1rem 1.2rem; box-shadow: 0 -2px 10px rgba(0,0,0,.1);
+}

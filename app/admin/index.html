@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard bearbeiten</title>
+<link rel="stylesheet" href="/vendor/leaflet.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header>
+    <h1>Dashboard bearbeiten</h1>
+    <a id="view-link" href="/" target="_blank">Live-Ansicht öffnen ↗</a>
+  </header>
+
+  <section id="event-settings">
+    <h2>Event</h2>
+    <label>Name<input id="eventName" type="text"></label>
+    <label>Akzentfarbe<input id="accentColor" type="color"></label>
+
+    <div class="map-tools">
+      <button data-mode="center" class="tool">Kartenmitte setzen</button>
+      <button data-mode="sw" class="tool">Ecke Südwest setzen</button>
+      <button data-mode="ne" class="tool">Ecke Nordost setzen</button>
+    </div>
+    <p class="hint">Werkzeug auswählen, dann auf die Karte klicken. Der farbige Rahmen zeigt den
+      Bereich, der für Besucher offline verfügbar ist.</p>
+
+    <button id="save-settings" class="primary">Einstellungen speichern</button>
+    <span id="settings-status" class="status"></span>
+  </section>
+
+  <section id="map-section">
+    <div id="admin-map"></div>
+  </section>
+
+  <section id="exhibitors">
+    <h2>Aussteller</h2>
+    <button id="add-exhibitor" class="tool">+ Neuen Aussteller hinzufügen (auf Karte klicken)</button>
+    <ul id="exhibitor-admin-list"></ul>
+  </section>
+
+  <div id="exhibitor-form" hidden>
+    <h3 id="form-title">Aussteller</h3>
+    <label>Name<input id="ex-name" type="text"></label>
+    <label>Beschreibung<textarea id="ex-desc" rows="3"></textarea></label>
+    <button id="ex-save" class="primary">Speichern</button>
+    <button id="ex-cancel">Abbrechen</button>
+    <span id="ex-status" class="status"></span>
+  </div>
+
+  <script src="/vendor/leaflet.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>

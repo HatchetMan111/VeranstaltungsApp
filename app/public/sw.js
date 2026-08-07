@@ -1,9 +1,9 @@
 const CACHE = 'event-cache-v1';
 const SHELL = [
-  './', 'index.html', 'style.css', 'app.js', 'manifest.json',
+  './', 'index.html', 'style.css', 'app.js', '/manifest.json',
   'vendor/leaflet.js', 'vendor/leaflet.css',
   'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
-  'config.json', 'data/exhibitors.geojson'
+  '/api/config', '/api/exhibitors'
 ];
 
 // Standard Slippy-Map-Kachelmathematik: Lat/Lng-Grenzen -> Kachel-Indizes
@@ -14,7 +14,7 @@ function lat2tile(lat, z) {
 }
 
 async function tileUrls() {
-  const config = await (await fetch('config.json')).json();
+  const config = await (await fetch('/api/config')).json();
   const [[south, west], [north, east]] = config.bounds;
   const minZ = config.minZoom || 15, maxZ = config.maxZoom || 19;
   const urls = [];

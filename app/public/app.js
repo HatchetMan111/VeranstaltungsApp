@@ -1,5 +1,5 @@
 (async function () {
-  const config = await (await fetch('config.json')).json();
+  const config = await (await fetch('/api/config')).json();
 
   document.documentElement.style.setProperty('--accent', config.accentColor || '#c9822b');
   document.getElementById('event-title').textContent = config.eventName || 'Event-Karte';
@@ -14,7 +14,7 @@
     attribution: '© OpenStreetMap-Mitwirkende'
   }).addTo(map);
 
-  const geo = await (await fetch('data/exhibitors.geojson')).json();
+  const geo = await (await fetch('/api/exhibitors')).json();
   const list = document.getElementById('exhibitor-list');
 
   L.geoJSON(geo, {
