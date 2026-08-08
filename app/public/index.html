@@ -11,19 +11,40 @@
 </head>
 <body>
   <header id="header">
+    <img id="event-logo" alt="" hidden>
     <h1 id="event-title">Lädt…</h1>
-    <button id="filter-toggle" aria-label="Ausstellerliste anzeigen">☰</button>
   </header>
 
-  <div id="map"></div>
+  <main>
+    <div id="view-map" class="view active">
+      <div id="map"></div>
+    </div>
 
-  <aside id="sidebar" hidden>
-    <h2>Aussteller</h2>
-    <ul id="exhibitor-list"></ul>
-  </aside>
+    <div id="view-exhibitors" class="view">
+      <h2>Aussteller</h2>
+      <ul id="exhibitor-list-full"></ul>
+    </div>
 
-  <div id="offline-badge" hidden>Offline – Karte läuft aus dem Cache</div>
-  <footer>Umgesetzt von LichtValleyApps</footer>
+    <div id="view-program" class="view">
+      <h2>Programm</h2>
+      <ul id="program-list"></ul>
+    </div>
+
+    <div id="view-info" class="view">
+      <h2 id="info-title">Info</h2>
+      <p id="info-website" hidden><a id="info-website-link" href="#" target="_blank" rel="noopener">Zur Webseite ↗</a></p>
+      <img id="info-header-image" alt="" hidden>
+    </div>
+  </main>
+
+  <div id="offline-badge" hidden>Offline – Daten aus dem Cache</div>
+
+  <nav id="bottom-nav">
+    <button data-view="map" class="active"><span class="icon">🗺️</span><span>Karte</span></button>
+    <button data-view="exhibitors"><span class="icon">📋</span><span>Aussteller</span></button>
+    <button data-view="program"><span class="icon">📅</span><span>Programm</span></button>
+    <button data-view="info"><span class="icon">ℹ️</span><span>Info</span></button>
+  </nav>
 
   <script src="vendor/leaflet.js"></script>
   <script src="app.js"></script>

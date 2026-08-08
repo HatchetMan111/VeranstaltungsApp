@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const https = require('https');
 const { execFile } = require('child_process');
 const multer = require('multer');
 
@@ -11,9 +12,11 @@ const PORT = process.env.PORT || 80;
 const DATA_DIR = path.join(__dirname, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 const EXHIBITORS_FILE = path.join(DATA_DIR, 'exhibitors.geojson');
+const PROGRAM_FILE = path.join(DATA_DIR, 'program.json');
 const ADMIN_FILE = path.join(DATA_DIR, 'admin.json');
 const TILES_DIR = path.join(__dirname, 'public', 'tiles');
-const UPLOAD_DIR = '/tmp/veranstaltungsapp-uploads';
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+const TMP_UPLOAD_DIR = '/tmp/veranstaltungsapp-uploads';
 
 function readJSON(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -22,19 +25,21 @@ function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-// Beim allerersten Start (frisch geklonter Container) Standarddaten anlegen,
-// inkl. eines zufälligen Admin-Passworts. Das macht jeden Klon der Proxmox-
-// Vorlage sofort eigenständig nutzbar, ohne dass von außen etwas gepusht
-// werden muss.
+// Beim allerersten Start (frisch erstellter Container) Standarddaten anlegen,
+// inkl. eines zufälligen Admin-Passworts.
 function ensureData() {
   fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.mkdirSync(TILES_DIR, { recursive: true });
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  fs.mkdirSync(TMP_UPLOAD_DIR, { recursive: true });
 
   if (!fs.existsSync(CONFIG_FILE)) {
     writeJSON(CONFIG_FILE, {
       eventName: 'Neues Event',
       accentColor: '#c9822b',
+      websiteUrl: '',
+      logoUrl: '',
+      headerImageUrl: '',
       center: [51.1657, 10.4515],
       defaultZoom: 6,
       minZoom: 15,
@@ -45,6 +50,9 @@ function ensureData() {
   }
   if (!fs.existsSync(EXHIBITORS_FILE)) {
     writeJSON(EXHIBITORS_FILE, { type: 'FeatureCollection', features: [] });
+  }
+  if (!fs.existsSync(PROGRAM_FILE)) {
+    writeJSON(PROGRAM_FILE, { items: [] });
   }
   if (!fs.existsSync(ADMIN_FILE)) {
     writeJSON(ADMIN_FILE, { username: 'admin', password: crypto.randomBytes(6).toString('hex') });
@@ -107,13 +115,15 @@ app.get('/', (req, res, next) => {
   next();
 });
 
-// Öffentliche, lesende API für die Besucher-Karte (auch offline-gecacht via Service Worker)
+// Öffentliche, lesende API für die Besucher-Ansicht (auch offline-gecacht via Service Worker)
 app.get('/api/config', (req, res) => res.json(readJSON(CONFIG_FILE)));
 app.get('/api/exhibitors', (req, res) => res.json(readJSON(EXHIBITORS_FILE)));
+app.get('/api/program', (req, res) => res.json(readJSON(PROGRAM_FILE)));
 
 // PWA-Manifest wird live aus der aktuellen Konfiguration erzeugt
 app.get('/manifest.json', (req, res) => {
   const cfg = readJSON(CONFIG_FILE);
+  const icon = cfg.logoUrl || '/vendor/images/marker-icon.png';
   res.json({
     name: cfg.eventName,
     short_name: cfg.eventName,
@@ -122,8 +132,8 @@ app.get('/manifest.json', (req, res) => {
     background_color: '#ffffff',
     theme_color: cfg.accentColor || '#c9822b',
     icons: [
-      { src: '/vendor/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/vendor/icon-512.png', sizes: '512x512', type: 'image/png' }
+      { src: icon, sizes: '192x192', type: 'image/png' },
+      { src: icon, sizes: '512x512', type: 'image/png' }
     ]
   });
 });
@@ -137,7 +147,10 @@ app.put('/api/config', requireAuth, (req, res) => {
   if (!cfg || !cfg.eventName || !Array.isArray(cfg.center) || !Array.isArray(cfg.bounds)) {
     return res.status(400).json({ error: 'eventName, center und bounds sind Pflicht.' });
   }
+  const current = readJSON(CONFIG_FILE);
   cfg.setupComplete = true;
+  cfg.logoUrl = cfg.logoUrl || current.logoUrl || '';
+  cfg.headerImageUrl = cfg.headerImageUrl || current.headerImageUrl || '';
   writeJSON(CONFIG_FILE, cfg);
   res.json({ ok: true });
 });
@@ -179,6 +192,40 @@ app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Programm / Angebote des Tages
+app.post('/api/program', requireAuth, (req, res) => {
+  const { time, title, description } = req.body;
+  if (!title) return res.status(400).json({ error: 'title ist Pflicht.' });
+  const program = readJSON(PROGRAM_FILE);
+  const item = { id: crypto.randomUUID(), time: time || '', title, description: description || '' };
+  program.items.push(item);
+  program.items.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  writeJSON(PROGRAM_FILE, program);
+  res.status(201).json(item);
+});
+
+app.put('/api/program/:id', requireAuth, (req, res) => {
+  const program = readJSON(PROGRAM_FILE);
+  const item = program.items.find((i) => i.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'Nicht gefunden.' });
+  const { time, title, description } = req.body;
+  if (title) item.title = title;
+  if (time !== undefined) item.time = time;
+  if (description !== undefined) item.description = description;
+  program.items.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  writeJSON(PROGRAM_FILE, program);
+  res.json(item);
+});
+
+app.delete('/api/program/:id', requireAuth, (req, res) => {
+  const program = readJSON(PROGRAM_FILE);
+  const before = program.items.length;
+  program.items = program.items.filter((i) => i.id !== req.params.id);
+  if (program.items.length === before) return res.status(404).json({ error: 'Nicht gefunden.' });
+  writeJSON(PROGRAM_FILE, program);
+  res.json({ ok: true });
+});
+
 // Admin-Passwort im Dashboard änderbar, kein Dateizugriff nötig
 app.put('/api/admin/password', requireAuth, (req, res) => {
   const { newPassword } = req.body;
@@ -191,10 +238,31 @@ app.put('/api/admin/password', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
-// Kartenkacheln als ZIP hochladen statt per Datei-Push von außen
-const upload = multer({ dest: UPLOAD_DIR, limits: { fileSize: 200 * 1024 * 1024 } });
+// Logo/Header-Bild hochladen
+const brandingUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 15 * 1024 * 1024 } });
 
-app.post('/api/tiles', requireAuth, upload.single('tiles'), (req, res) => {
+function saveBrandingImage(req, res, configField) {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
+  const filename = `${configField}-${Date.now()}${ext}`;
+  fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  const cfg = readJSON(CONFIG_FILE);
+  cfg[configField] = `/uploads/${filename}`;
+  writeJSON(CONFIG_FILE, cfg);
+  res.json({ ok: true, url: cfg[configField] });
+}
+
+app.post('/api/branding/logo', requireAuth, brandingUpload.single('image'), (req, res) => {
+  saveBrandingImage(req, res, 'logoUrl');
+});
+app.post('/api/branding/header', requireAuth, brandingUpload.single('image'), (req, res) => {
+  saveBrandingImage(req, res, 'headerImageUrl');
+});
+
+// Kartenkacheln: manueller ZIP-Upload …
+const tileUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 200 * 1024 * 1024 } });
+
+app.post('/api/tiles', requireAuth, tileUpload.single('tiles'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
   execFile('unzip', ['-o', req.file.path, '-d', TILES_DIR], (err) => {
     fs.unlink(req.file.path, () => {});
@@ -203,7 +271,68 @@ app.post('/api/tiles', requireAuth, upload.single('tiles'), (req, res) => {
   });
 });
 
-// Besucher-Dashboard: öffentlich, statisch
+// … oder automatischer Download direkt für den im Dashboard markierten Bereich
+function lon2tile(lon, z) { return Math.floor((lon + 180) / 360 * 2 ** z); }
+function lat2tile(lat, z) {
+  const rad = lat * Math.PI / 180;
+  return Math.floor((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * 2 ** z);
+}
+function tileList(bounds, minZ, maxZ) {
+  const [[south, west], [north, east]] = bounds;
+  const tiles = [];
+  for (let z = minZ; z <= maxZ; z++) {
+    const xMin = lon2tile(west, z), xMax = lon2tile(east, z);
+    const yMin = lat2tile(north, z), yMax = lat2tile(south, z);
+    for (let x = xMin; x <= xMax; x++) {
+      for (let y = yMin; y <= yMax; y++) tiles.push([z, x, y]);
+    }
+  }
+  return tiles;
+}
+function downloadTile(z, x, y) {
+  return new Promise((resolve, reject) => {
+    const dir = path.join(TILES_DIR, String(z), String(x));
+    fs.mkdirSync(dir, { recursive: true });
+    const dest = path.join(dir, `${y}.png`);
+    const subdomain = ['a', 'b', 'c'][(x + y) % 3];
+    const url = `https://${subdomain}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+    const file = fs.createWriteStream(dest);
+    https.get(url, { headers: { 'User-Agent': 'VeranstaltungsApp-LichtValleyApps/1.0 (+https://lichtvalleyapps.de)' } }, (res) => {
+      if (res.statusCode !== 200) { file.close(); fs.unlink(dest, () => {}); return reject(new Error(`HTTP ${res.statusCode}`)); }
+      res.pipe(file);
+      file.on('finish', () => file.close(resolve));
+    }).on('error', (err) => { file.close(); fs.unlink(dest, () => {}); reject(err); });
+  });
+}
+
+app.post('/api/tiles/download', requireAuth, async (req, res) => {
+  const cfg = readJSON(CONFIG_FILE);
+  const minZ = cfg.minZoom || 15, maxZ = cfg.maxZoom || 19;
+  const tiles = tileList(cfg.bounds, minZ, maxZ);
+
+  if (tiles.length === 0) {
+    return res.status(400).json({ error: 'Kein Kartenbereich gesetzt — erst Südwest-/Nordost-Ecke im Dashboard markieren.' });
+  }
+  if (tiles.length > 3000) {
+    return res.status(400).json({ error: `Bereich zu groß (${tiles.length} Kacheln). Kartenausschnitt verkleinern oder Zoomstufen reduzieren.` });
+  }
+
+  let downloaded = 0, failed = 0;
+  for (const [z, x, y] of tiles) {
+    try { await downloadTile(z, x, y); downloaded++; } catch { failed++; }
+    await new Promise((r) => setTimeout(r, 40)); // fair zur öffentlichen OSM-Kachelinfrastruktur
+  }
+
+  if (downloaded === 0) {
+    return res.status(502).json({
+      error: 'Keine Kachel konnte geladen werden — hat der Container Internetzugriff nach außen?',
+      downloaded, failed, total: tiles.length
+    });
+  }
+  res.json({ ok: true, downloaded, failed, total: tiles.length });
+});
+
+// Besucher-Ansicht: öffentlich, statisch
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.listen(PORT, () => console.log(`Veranstaltungs-App läuft auf Port ${PORT}`));

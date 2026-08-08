@@ -17,6 +17,7 @@
     <h2>Event</h2>
     <label>Name<input id="eventName" type="text"></label>
     <label>Akzentfarbe<input id="accentColor" type="color"></label>
+    <label>Webseite-URL (optional)<input id="websiteUrl" type="url" placeholder="https://…"></label>
 
     <div class="map-tools">
       <button data-mode="center" class="tool">Kartenmitte setzen</button>
@@ -34,6 +35,19 @@
     <div id="admin-map"></div>
   </section>
 
+  <section id="branding-section">
+    <h2>Logo &amp; Bilder</h2>
+    <label>Logo (App-Icon, quadratisch empfohlen)<input id="logo-file" type="file" accept="image/*"></label>
+    <button id="upload-logo" class="tool">Logo hochladen</button>
+    <span id="logo-status" class="status"></span>
+    <div id="logo-preview-wrap"><img id="logo-preview" hidden></div>
+
+    <label style="margin-top:1rem">Titelbild (wird in der Info-Ansicht gezeigt)<input id="header-file" type="file" accept="image/*"></label>
+    <button id="upload-header" class="tool">Titelbild hochladen</button>
+    <span id="header-status" class="status"></span>
+    <div id="header-preview-wrap"><img id="header-preview" hidden></div>
+  </section>
+
   <section id="exhibitors">
     <h2>Aussteller</h2>
     <button id="add-exhibitor" class="tool">+ Neuen Aussteller hinzufügen (auf Karte klicken)</button>
@@ -49,12 +63,33 @@
     <span id="ex-status" class="status"></span>
   </div>
 
+  <section id="program-section">
+    <h2>Programm / Angebote des Tages</h2>
+    <button id="add-program" class="tool">+ Programmpunkt hinzufügen</button>
+    <ul id="program-admin-list"></ul>
+  </section>
+
+  <div id="program-form" hidden>
+    <h3 id="program-form-title">Programmpunkt</h3>
+    <label>Uhrzeit (optional)<input id="pg-time" type="text" placeholder="z. B. 11:00"></label>
+    <label>Titel<input id="pg-title" type="text"></label>
+    <label>Beschreibung<textarea id="pg-desc" rows="3"></textarea></label>
+    <button id="pg-save" class="primary">Speichern</button>
+    <button id="pg-cancel">Abbrechen</button>
+    <span id="pg-status" class="status"></span>
+  </div>
+
   <section id="tiles-section">
     <h2>Kartenkacheln</h2>
-    <p class="hint">ZIP-Datei mit den Kacheln für den Offline-Bereich hochladen (Struktur: z/x/y.png,
-      passend zum oben markierten Rahmen).</p>
+    <p class="hint">Lädt die Kacheln für den oben markierten Bereich automatisch von OpenStreetMap.
+      Je nach Größe des Bereichs kann das bis zu einer Minute dauern.</p>
+    <button id="download-tiles" class="primary">Kacheln automatisch herunterladen</button>
+    <span id="tiles-download-status" class="status"></span>
+
+    <p class="hint" style="margin-top:1rem">Alternativ: eigenes Kachel-Paket als ZIP hochladen
+      (Struktur: z/x/y.png).</p>
     <input id="tiles-file" type="file" accept=".zip">
-    <button id="upload-tiles" class="primary">Hochladen</button>
+    <button id="upload-tiles" class="tool">Hochladen</button>
     <span id="tiles-status" class="status"></span>
   </section>
 

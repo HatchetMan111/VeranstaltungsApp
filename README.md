@@ -43,25 +43,39 @@ Falls das Repo schon lokal liegt, geht es auch direkt ohne erneutes Klonen:
 
 Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
 
-- Eventname und Akzentfarbe
+- Eventname, Akzentfarbe, Webseite-URL
+- Logo (App-Icon) und Titelbild (in der Besucher-Info-Ansicht)
 - Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
 - Aussteller: hinzufügen (auf Karte klicken → Formular ausfüllen), Position ändern,
   Name/Beschreibung bearbeiten, löschen
-- Kartenkacheln als ZIP hochladen (siehe unten, wie die entstehen)
+- Programm / Angebote des Tages (Uhrzeit, Titel, Beschreibung — unabhängig von einzelnen
+  Ausstellern)
+- Kartenkacheln für den markierten Bereich **automatisch von OpenStreetMap herunterladen**
+  (Alternative: eigenes ZIP hochladen, falls ein individuell gerendertes Kachel-Paket
+  gewünscht ist)
 - Admin-Passwort ändern — am besten gleich zu Beginn, bevor die Adresse öffentlich
   (z. B. über Cloudflare) erreichbar gemacht wird
 
-Änderungen wirken sofort auf der Besucher-Karte. Für die Admin-Karte werden Live-OSM-Kacheln
-genutzt (Internet vorausgesetzt); die Besucher-Karte läuft weiterhin komplett offline mit dem
-hochgeladenen Tile-Paket.
+Änderungen wirken sofort auf der Besucher-Ansicht. Für die Admin-Karte werden Live-OSM-Kacheln
+genutzt (Internet vorausgesetzt); die Besucher-Ansicht läuft weiterhin komplett offline mit dem
+heruntergeladenen Tile-Paket.
 
-## Kartenkacheln erzeugen (externer, einmaliger Schritt pro Event)
+## Besucher-Ansicht
 
-Für den im Dashboard markierten Kartenausschnitt ein kleines Tile-Paket rendern, z. B. mit
-`planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Zoomstufen 15–19, PNG-Kacheln in der
-Struktur `z/x/y.png`. Als ZIP packen (Wurzel des ZIP = die `z`-Ordner direkt) und im
-Admin-Dashboard hochladen. Öffentliche OSM-Tile-Server nicht direkt einbinden/cachen (verstößt
-gegen deren Nutzungsbedingungen) — immer selbst rendern.
+Untere Navigationsleiste mit vier Tabs: **Karte** (Ausstellerpunkte + Offline-Kartenausschnitt),
+**Aussteller** (volle Liste, Tippen zentriert die Karte auf den jeweiligen Stand), **Programm**
+(Angebote des Tages) und **Info** (Webseite-Link, Titelbild). Alles läuft als installierbare PWA;
+ein Service Worker cacht App-Shell, Kacheln und alle einmal geladenen Inhalte (auch Logo/Bilder)
+automatisch für den Offline-Betrieb.
+
+## Kartenkacheln automatisch laden
+
+Im Dashboard einfach „Kacheln automatisch herunterladen“ klicken, nachdem der Bereich (Südwest-/
+Nordost-Ecke) gesetzt ist. Der Server lädt die passenden Kacheln direkt von den öffentlichen
+OpenStreetMap-Tile-Servern (mit eigenem User-Agent, moderatem Tempo, Obergrenze 3000 Kacheln pro
+Anfrage — bei größeren Bereichen Zoomstufen oder Fläche reduzieren). Für einen individuell
+gerenderten Kartenstil bleibt der manuelle ZIP-Upload als Alternative bestehen (z. B. mit
+`planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Struktur `z/x/y.png`).
 
 ## Passwort vergessen?
 

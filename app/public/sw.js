@@ -1,9 +1,9 @@
-const CACHE = 'event-cache-v1';
+const CACHE = 'event-cache-v2';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', '/manifest.json',
   'vendor/leaflet.js', 'vendor/leaflet.css',
   'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
-  '/api/config', '/api/exhibitors'
+  '/api/config', '/api/exhibitors', '/api/program'
 ];
 
 // Standard Slippy-Map-Kachelmathematik: Lat/Lng-Grenzen -> Kachel-Indizes
@@ -50,12 +50,20 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+// Cache-first mit Laufzeit-Caching: alles, was einmal online geladen wurde
+// (z. B. Logo, Header-Bild), landet automatisch im Cache für spätere Offline-Besuche.
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   event.respondWith((async () => {
     const cached = await caches.match(event.request);
     if (cached) return cached;
     try {
-      return await fetch(event.request);
+      const response = await fetch(event.request);
+      if (response.ok) {
+        const cache = await caches.open(CACHE);
+        cache.put(event.request, response.clone());
+      }
+      return response;
     } catch {
       return cached || Response.error();
     }
