@@ -1,11 +1,9 @@
 #!/usr/bin/env bash
 # provision-lxc.sh <CTID> <hostname>
-# Einmalige technische Einrichtung auf dem Proxmox-Host. Baut die Vorlage:
-# Node.js installieren, App-Code hineinkopieren, npm install, Dienst
-# aktivieren (nicht starten!) — und wandelt den Container danach automatisch
-# in eine Proxmox-Vorlage um. Ab dann läuft jedes Event ausschließlich über
-# die Proxmox-Weboberfläche (Klonen) und das Admin-Dashboard im Browser.
-# Kein CLI-Zugriff mehr pro Event nötig.
+# Erstellt einen laufenden LXC mit der fertigen App, startet den Dienst und
+# gibt am Ende IP + generierte Admin-Zugangsdaten aus. Für jedes neue Event
+# einfach mit einer neuen CTID erneut aufrufen (oder den Einzeiler aus der
+# README, der die nächste freie CTID automatisch ermittelt).
 set -euo pipefail
 
 CTID="${1:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
@@ -46,7 +44,7 @@ pct exec "$CTID" -- bash -c '
   mkdir -p /var/www/event
 '
 
-echo "Kopiere App-Code in die Vorlage…"
+echo "Kopiere App-Code…"
 tar -C "$SCRIPT_DIR/app" -cf - . | pct exec "$CTID" -- tar -C /var/www/event -xf -
 pct exec "$CTID" -- bash -c 'cd /var/www/event && npm install --omit=dev --silent'
 pct exec "$CTID" -- chown -R appuser:appuser /var/www/event
@@ -54,23 +52,36 @@ pct exec "$CTID" -- chown -R appuser:appuser /var/www/event
 pct push "$CTID" "$SCRIPT_DIR/veranstaltungsapp.service" /etc/systemd/system/veranstaltungsapp.service
 pct exec "$CTID" -- systemctl daemon-reload
 pct exec "$CTID" -- systemctl enable -q veranstaltungsapp
+pct exec "$CTID" -- systemctl start veranstaltungsapp
 
-# Bewusst NICHT starten: Der Dienst legt beim ersten echten Start pro
-# geklontem Container eigene Daten inkl. zufälligem Admin-Passwort an.
-# Würde er hier schon laufen, würden alle Klone dasselbe Passwort erben.
+echo "Warte auf ersten Start…"
+ADMIN_JSON=""
+for i in $(seq 1 15); do
+  ADMIN_JSON="$(pct exec "$CTID" -- cat /var/www/event/data/admin.json 2>/dev/null || true)"
+  [[ -n "$ADMIN_JSON" ]] && break
+  sleep 2
+done
 
-echo "Wandle Container in Proxmox-Vorlage um…"
-pct stop "$CTID"
-sleep 2
-pct template "$CTID"
+IP=""
+for i in $(seq 1 15); do
+  IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
+  [[ -n "$IP" ]] && break
+  sleep 2
+done
 
-banner "Vorlage $CTID ($HOSTNAME) ist fertig" \
-  "Ab jetzt läuft jedes Event komplett über die Proxmox-Weboberfläche:" \
+if [[ -n "$ADMIN_JSON" ]]; then
+  ADMIN_USER="$(echo "$ADMIN_JSON" | grep -o '"username" *: *"[^"]*"' | cut -d'"' -f4)"
+  ADMIN_PASS="$(echo "$ADMIN_JSON" | grep -o '"password" *: *"[^"]*"' | cut -d'"' -f4)"
+else
+  ADMIN_USER="admin"
+  ADMIN_PASS="(Dienst noch nicht bereit — Zugangsdaten stehen auf der Startseite im Browser)"
+fi
+
+banner "LXC $CTID ($HOSTNAME) ist live" \
+  "Dashboard:  http://${IP}/" \
+  "Admin:      http://${IP}/admin" \
+  "Login:      ${ADMIN_USER} / ${ADMIN_PASS}" \
   "" \
-  "  1. Vorlage $CTID rechtsklicken → Klonen → Namen vergeben → Klonen" \
-  "  2. Geklonten Container starten" \
-  "  3. IP im Reiter „Übersicht“ des Containers ablesen, im Browser öffnen" \
-  "  4. Zugangsdaten stehen direkt auf der Startseite (Ersteinrichtung)" \
-  "" \
-  "Kein Terminal mehr nötig — Name, Farbe, Kartenbereich, Aussteller," \
-  "Kacheln (ZIP-Upload) und Passwort werden alle im Admin-Dashboard gepflegt."
+  "Direkt im Browser öffnen und das Event einrichten — Name, Farbe," \
+  "Kartenbereich, Aussteller, Kacheln (ZIP-Upload) und Passwort" \
+  "alles im Admin-Dashboard, kein Terminal mehr nötig."

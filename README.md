@@ -1,11 +1,11 @@
-# Event-Aussteller-Karte – Proxmox-Vorlage
+# Event-Aussteller-Karte
 
 Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdemärkte).
-Alles bis auf die einmalige technische Einrichtung läuft über den Browser: Proxmox-
-Weboberfläche zum Klonen, Admin-Dashboard zum Befüllen. Kein Terminal, kein `cd /opt/...`
-pro Event.
+Ein Befehl erstellt einen laufenden Container und zeigt am Ende IP und Admin-Zugangsdaten —
+alles Weitere läuft im Browser über das Admin-Dashboard, kein Datei-Editieren oder `cd` mehr
+nötig.
 
-## 1. Einmalige technische Einrichtung (nur einmal, Terminal)
+## Neues Event anlegen
 
 Auf der Proxmox-Host-Shell:
 
@@ -13,25 +13,43 @@ Auf der Proxmox-Host-Shell:
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HatchetMan111/VeranstaltungsApp/main/install.sh)"
 ```
 
-Das lädt das Repo, baut einen Container mit der fertigen App darin, fragt nur nach einem
-Hostnamen für die Vorlage — und wandelt den Container am Ende automatisch in eine
-**Proxmox-Vorlage** um. Dieser Schritt passiert nur einmal, beim Aufbau des Produkts, nicht
-pro Kunde/Event.
+Fragt nur nach einem Hostnamen, erstellt einen Container mit der nächsten freien CTID,
+installiert Node.js, kopiert die App hinein und startet sie. Am Ende erscheint eine
+hervorgehobene Zusammenfassung:
 
-## 2. Pro Event (nur Browser, kein Terminal)
+```
+✔ LXC 138 (pferdemarkt-musterstadt) ist live
+────────────────────────────────────────────────────
+  Dashboard:  http://192.168.1.42/
+  Admin:      http://192.168.1.42/admin
+  Login:      admin / 1a4f348e4dc4
 
-1. In der Proxmox-Weboberfläche die Vorlage **rechtsklicken → Klonen**, Namen vergeben,
-   klonen
-2. Geklonten Container **starten**
-3. Im Reiter „Übersicht“ des Containers die IP-Adresse ablesen, im Browser öffnen
-4. Es erscheint eine **Ersteinrichtungs-Seite** mit dem generierten Admin-Login
-5. Im Admin-Dashboard (`/admin`, Login von Schritt 4) alles Weitere einrichten:
-   - Eventname, Akzentfarbe
-   - Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
-   - Aussteller hinzufügen (auf Karte klicken → Formular), Position ändern, bearbeiten, löschen
-   - Kartenkacheln als ZIP hochladen (siehe unten, wie die entstehen)
-   - Eigenes Passwort setzen — **bevor** die Adresse öffentlich (z. B. über Cloudflare)
-     erreichbar gemacht wird, da die Ersteinrichtungs-Seite das Startpasswort offen anzeigt
+  Direkt im Browser öffnen und das Event einrichten — Name, Farbe,
+  Kartenbereich, Aussteller, Kacheln (ZIP-Upload) und Passwort
+  alles im Admin-Dashboard, kein Terminal mehr nötig.
+────────────────────────────────────────────────────
+```
+
+Für ein weiteres Event einfach den Einzeiler erneut ausführen — jeder Aufruf legt einen
+eigenen, unabhängigen Container mit eigenen Zugangsdaten an.
+
+Falls das Repo schon lokal liegt, geht es auch direkt ohne erneutes Klonen:
+
+```bash
+./provision-lxc.sh 139 naechstes-event
+```
+
+## Admin-Dashboard
+
+Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
+
+- Eventname und Akzentfarbe
+- Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
+- Aussteller: hinzufügen (auf Karte klicken → Formular ausfüllen), Position ändern,
+  Name/Beschreibung bearbeiten, löschen
+- Kartenkacheln als ZIP hochladen (siehe unten, wie die entstehen)
+- Admin-Passwort ändern — am besten gleich zu Beginn, bevor die Adresse öffentlich
+  (z. B. über Cloudflare) erreichbar gemacht wird
 
 Änderungen wirken sofort auf der Besucher-Karte. Für die Admin-Karte werden Live-OSM-Kacheln
 genutzt (Internet vorausgesetzt); die Besucher-Karte läuft weiterhin komplett offline mit dem
@@ -41,7 +59,7 @@ hochgeladenen Tile-Paket.
 
 Für den im Dashboard markierten Kartenausschnitt ein kleines Tile-Paket rendern, z. B. mit
 `planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Zoomstufen 15–19, PNG-Kacheln in der
-Struktur `z/x/y.png`. Das Ganze als ZIP packen (Wurzel des ZIP = die `z`-Ordner direkt) und im
+Struktur `z/x/y.png`. Als ZIP packen (Wurzel des ZIP = die `z`-Ordner direkt) und im
 Admin-Dashboard hochladen. Öffentliche OSM-Tile-Server nicht direkt einbinden/cachen (verstößt
 gegen deren Nutzungsbedingungen) — immer selbst rendern.
 
@@ -62,12 +80,10 @@ DNS-CNAME. Container selbst bleibt auf HTTP, TLS übernimmt Cloudflare an der Ed
 ## Architektur
 
 Node.js + Express, ein einziger Prozess (systemd-Service `veranstaltungsapp`, läuft als
-unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Der App-Code inkl.
-`node_modules` steckt schon in der Proxmox-Vorlage — Klonen dauert Sekunden, kein `npm install`
-pro Event. Daten liegen als `config.json` / `exhibitors.geojson` / `admin.json` auf der
-Container-Platte, keine Datenbank. Jeder frisch gestartete Klon erzeugt beim allerersten Start
-eigene Daten inkl. eines zufälligen Admin-Passworts — deshalb wird der Dienst beim Bau der
-Vorlage aktiviert, aber nie gestartet.
+unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Daten liegen als
+`config.json` / `exhibitors.geojson` / `admin.json` auf der Container-Platte, keine Datenbank.
+Jeder Container ist unabhängig — kein gemeinsamer Zustand, keine Vorlage, kein Klonen nötig;
+`provision-lxc.sh` baut jedes Mal frisch.
 
 ## Dimensionierung
 
