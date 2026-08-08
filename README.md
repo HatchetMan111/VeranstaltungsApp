@@ -1,88 +1,73 @@
-# Event-Aussteller-Karte – LXC-Vorlage
+# Event-Aussteller-Karte – Proxmox-Vorlage
 
-Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdemärkte),
-plus ein geschütztes **Admin-Dashboard**, über das sich Eventname, Farbe, Kartenausschnitt
-und alle Aussteller direkt im Browser bearbeiten lassen — keine Dateibearbeitung per SSH
-mehr nötig.
+Offline-fähige PWA mit Karte + Ausstellerliste für Tagesevents (z. B. Pferdemärkte).
+Alles bis auf die einmalige technische Einrichtung läuft über den Browser: Proxmox-
+Weboberfläche zum Klonen, Admin-Dashboard zum Befüllen. Kein Terminal, kein `cd /opt/...`
+pro Event.
 
-## Einzeiler-Install (Proxmox-Host)
+## 1. Einmalige technische Einrichtung (nur einmal, Terminal)
+
+Auf der Proxmox-Host-Shell:
 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HatchetMan111/VeranstaltungsApp/main/install.sh)"
 ```
 
-Klont das Repo nach `/opt/veranstaltungsapp`, lädt bei Bedarf das Debian-12-Template,
-legt den LXC mit der nächsten freien CTID an und installiert Node.js darin. Fragt nur
-nach dem Hostnamen. Der Dienst läuft danach noch **nicht** — das ist Absicht, siehe unten.
+Das lädt das Repo, baut einen Container mit der fertigen App darin, fragt nur nach einem
+Hostnamen für die Vorlage — und wandelt den Container am Ende automatisch in eine
+**Proxmox-Vorlage** um. Dieser Schritt passiert nur einmal, beim Aufbau des Produkts, nicht
+pro Kunde/Event.
 
-## Manuell: LXC anlegen
+## 2. Pro Event (nur Browser, kein Terminal)
 
-Falls das Repo bereits lokal liegt (z. B. schon mal per Einzeiler installiert):
+1. In der Proxmox-Weboberfläche die Vorlage **rechtsklicken → Klonen**, Namen vergeben,
+   klonen
+2. Geklonten Container **starten**
+3. Im Reiter „Übersicht“ des Containers die IP-Adresse ablesen, im Browser öffnen
+4. Es erscheint eine **Ersteinrichtungs-Seite** mit dem generierten Admin-Login
+5. Im Admin-Dashboard (`/admin`, Login von Schritt 4) alles Weitere einrichten:
+   - Eventname, Akzentfarbe
+   - Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
+   - Aussteller hinzufügen (auf Karte klicken → Formular), Position ändern, bearbeiten, löschen
+   - Kartenkacheln als ZIP hochladen (siehe unten, wie die entstehen)
+   - Eigenes Passwort setzen — **bevor** die Adresse öffentlich (z. B. über Cloudflare)
+     erreichbar gemacht wird, da die Ersteinrichtungs-Seite das Startpasswort offen anzeigt
+
+Änderungen wirken sofort auf der Besucher-Karte. Für die Admin-Karte werden Live-OSM-Kacheln
+genutzt (Internet vorausgesetzt); die Besucher-Karte läuft weiterhin komplett offline mit dem
+hochgeladenen Tile-Paket.
+
+## Kartenkacheln erzeugen (externer, einmaliger Schritt pro Event)
+
+Für den im Dashboard markierten Kartenausschnitt ein kleines Tile-Paket rendern, z. B. mit
+`planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Zoomstufen 15–19, PNG-Kacheln in der
+Struktur `z/x/y.png`. Das Ganze als ZIP packen (Wurzel des ZIP = die `z`-Ordner direkt) und im
+Admin-Dashboard hochladen. Öffentliche OSM-Tile-Server nicht direkt einbinden/cachen (verstößt
+gegen deren Nutzungsbedingungen) — immer selbst rendern.
+
+## Passwort vergessen?
+
+Einziger Fall, der noch das Terminal braucht:
 
 ```bash
-./provision-lxc.sh 150 pferdemarkt-template
+pct exec <CTID> -- cat /var/www/event/data/admin.json
 ```
-
-## Pro Auftrag: Event individualisieren
-
-1. Ordner kopieren: `cp -r events/beispiel-pferdemarkt events/<neuer-auftrag>`
-2. `config.json` anpassen: Eventname, Farbe, Kartenmittelpunkt, `bounds` (Süd/West, Nord/Ost) —
-   das sind nur die Startwerte, alles Weitere läuft über das Admin-Dashboard
-3. `exhibitors.geojson` optional mit Startdaten befüllen (kann auch leer bleiben und komplett
-   über das Dashboard gepflegt werden)
-4. `tiles/` mit den Kartenkacheln für genau den `bounds`-Ausschnitt befüllen (siehe unten)
-5. Deployen:
-
-```bash
-./deploy-event.sh 151 events/<neuer-auftrag>
-```
-
-Am Ende erscheint eine deutlich hervorgehobene Zusammenfassung:
-
-```
-✔ Event 'Pferdemarkt Musterstadt 2026' ist live
-────────────────────────────────────────────────────
-  Dashboard (Besucher):  http://192.168.1.42/
-  Admin (Bearbeiten):    http://192.168.1.42/admin
-  Login:                 admin / xK9mP2qLtR7w
-
-  Passwort jetzt notieren – wird nicht erneut angezeigt. Neu setzen:
-    ./deploy-event.sh 151 events/<neuer-auftrag> <neues-passwort>
-────────────────────────────────────────────────────
-```
-
-## Admin-Dashboard
-
-Unter `/admin` (HTTP-Basic-Auth, Login siehe oben) lässt sich bearbeiten:
-
-- Eventname und Akzentfarbe
-- Kartenmitte und der Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
-- Aussteller: hinzufügen (auf Karte klicken → Formular ausfüllen), Position ändern,
-  Name/Beschreibung bearbeiten, löschen
-
-Änderungen wirken sofort auf der Besucher-Karte — kein erneutes Deployen nötig. Für die
-Admin-Karte werden Live-OSM-Kacheln genutzt (Internet vorausgesetzt); die Besucher-Karte
-läuft weiterhin komplett offline mit dem vorbereiteten Tile-Paket.
-
-## Kartenkacheln erzeugen (nicht Teil dieses Pakets)
-
-Für den `bounds`-Ausschnitt einmalig ein kleines Tile-Paket rendern, z. B. mit `planetiler`
-oder `tilemaker` aus einem Geofabrik-Auszug, Zoomstufen 15–19, Ausgabe als PNG-Kacheln
-unter `tiles/{z}/{x}/{y}.png`. Öffentliche OSM-Tile-Server nicht direkt einbinden/cachen
-(verstößt gegen deren Nutzungsbedingungen) – immer selbst rendern.
 
 ## Cloudflare
 
-Tunnel läuft bereits. Nur eine neue Ingress-Regel in der bestehenden `cloudflared`-Config
-ergänzen (Hostname → interne IP:80 des LXC) plus passenden DNS-CNAME. Container selbst
-bleibt auf HTTP, TLS übernimmt Cloudflare an der Edge.
+Tunnel läuft bereits. Pro Event nur eine neue Ingress-Regel in der bestehenden
+`cloudflared`-Config ergänzen (Hostname → interne IP:80 des Containers) plus passenden
+DNS-CNAME. Container selbst bleibt auf HTTP, TLS übernimmt Cloudflare an der Edge.
 
 ## Architektur
 
 Node.js + Express, ein einziger Prozess (systemd-Service `veranstaltungsapp`, läuft als
-unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Daten liegen als
-`config.json` / `exhibitors.geojson` auf der Container-Platte, keine Datenbank. Kein nginx
-mehr nötig — Express liefert Besucher-Seite, Admin-Dashboard und API aus einem Prozess.
+unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Der App-Code inkl.
+`node_modules` steckt schon in der Proxmox-Vorlage — Klonen dauert Sekunden, kein `npm install`
+pro Event. Daten liegen als `config.json` / `exhibitors.geojson` / `admin.json` auf der
+Container-Platte, keine Datenbank. Jeder frisch gestartete Klon erzeugt beim allerersten Start
+eigene Daten inkl. eines zufälligen Admin-Passworts — deshalb wird der Dienst beim Bau der
+Vorlage aktiviert, aber nie gestartet.
 
 ## Dimensionierung
 

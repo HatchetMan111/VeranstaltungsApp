@@ -194,5 +194,38 @@
     renderExhibitors();
   }
 
+  document.getElementById('save-password').addEventListener('click', async () => {
+    const newPassword = document.getElementById('new-password').value;
+    const status = document.getElementById('password-status');
+    try {
+      const res = await fetch('/api/admin/password', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
+      document.getElementById('new-password').value = '';
+      setStatus(status, 'Geändert. Beim nächsten Laden neu einloggen.', true);
+    } catch (err) {
+      setStatus(status, err.message, false);
+    }
+  });
+
+  document.getElementById('upload-tiles').addEventListener('click', async () => {
+    const fileInput = document.getElementById('tiles-file');
+    const status = document.getElementById('tiles-status');
+    if (!fileInput.files[0]) { setStatus(status, 'Bitte zuerst eine ZIP-Datei auswählen.', false); return; }
+    const formData = new FormData();
+    formData.append('tiles', fileInput.files[0]);
+    setStatus(status, 'Lade hoch …', true);
+    try {
+      const res = await fetch('/api/tiles', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
+      setStatus(status, 'Kacheln hochgeladen.', true);
+    } catch (err) {
+      setStatus(status, err.message, false);
+    }
+  });
+
   loadAll();
 })();

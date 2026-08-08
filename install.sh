@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# install.sh — Einzeiler-Installer
+# install.sh — Einzeiler-Installer für die einmalige technische Einrichtung
 # Aufruf auf dem Proxmox-Host:
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/HatchetMan111/VeranstaltungsApp/main/install.sh)"
 #
-# Klont das Repo, ermittelt die nächste freie CTID und ruft provision-lxc.sh auf.
+# Klont das Repo, ermittelt die nächste freie CTID und baut daraus die
+# Proxmox-Vorlage (siehe provision-lxc.sh). Danach läuft alles Weitere nur
+# noch über die Proxmox-Weboberfläche und den Browser — kein Terminal mehr.
 set -euo pipefail
 
 REPO_URL="https://github.com/HatchetMan111/VeranstaltungsApp.git"
@@ -19,20 +21,9 @@ else
   git clone -q "$REPO_URL" "$TARGET_DIR"
 fi
 chmod +x "$TARGET_DIR"/*.sh
-source "$TARGET_DIR/common.sh"
 
 CTID="$(pvesh get /cluster/nextid)"
-read -rp "Hostname für den LXC [veranstaltungsapp-${CTID}]: " HOSTNAME
-HOSTNAME="${HOSTNAME:-veranstaltungsapp-${CTID}}"
+read -rp "Hostname für die Vorlage [veranstaltungsapp-vorlage]: " HOSTNAME
+HOSTNAME="${HOSTNAME:-veranstaltungsapp-vorlage}"
 
 "$TARGET_DIR/provision-lxc.sh" "$CTID" "$HOSTNAME"
-
-banner "Repo installiert unter $TARGET_DIR" \
-  "Der LXC steht, ist aber noch leer — jetzt ein Event befüllen:" \
-  "" \
-  "  cd $TARGET_DIR" \
-  "  cp -r events/beispiel-pferdemarkt events/mein-event" \
-  "  # config.json + exhibitors.geojson anpassen, tiles/ befüllen" \
-  "  ./deploy-event.sh $CTID events/mein-event" \
-  "" \
-  "Danach zeigt deploy-event.sh Dashboard-URL, Admin-URL und Zugangsdaten an."

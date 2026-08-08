@@ -5,7 +5,6 @@ After=network.target
 [Service]
 Type=simple
 WorkingDirectory=/var/www/event
-EnvironmentFile=/etc/veranstaltungsapp.env
 ExecStart=/usr/bin/node server.js
 Restart=on-failure
 User=appuser

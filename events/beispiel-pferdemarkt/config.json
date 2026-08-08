@@ -1,9 +1,0 @@
-{
-  "eventName": "Pferdemarkt Musterstadt 2026",
-  "accentColor": "#c9822b",
-  "center": [49.4875, 9.7815],
-  "defaultZoom": 17,
-  "minZoom": 15,
-  "maxZoom": 19,
-  "bounds": [[49.4855, 9.7785], [49.4895, 9.7845]]
-}

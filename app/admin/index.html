@@ -49,6 +49,22 @@
     <span id="ex-status" class="status"></span>
   </div>
 
+  <section id="tiles-section">
+    <h2>Kartenkacheln</h2>
+    <p class="hint">ZIP-Datei mit den Kacheln für den Offline-Bereich hochladen (Struktur: z/x/y.png,
+      passend zum oben markierten Rahmen).</p>
+    <input id="tiles-file" type="file" accept=".zip">
+    <button id="upload-tiles" class="primary">Hochladen</button>
+    <span id="tiles-status" class="status"></span>
+  </section>
+
+  <section id="password-section">
+    <h2>Sicherheit</h2>
+    <label>Neues Admin-Passwort (mind. 8 Zeichen)<input id="new-password" type="password" minlength="8"></label>
+    <button id="save-password" class="primary">Passwort ändern</button>
+    <span id="password-status" class="status"></span>
+  </section>
+
   <script src="/vendor/leaflet.js"></script>
   <script src="admin.js"></script>
 </body>

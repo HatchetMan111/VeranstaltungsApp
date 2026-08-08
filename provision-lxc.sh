@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # provision-lxc.sh <CTID> <hostname>
-# Einmalig auf dem Proxmox-Host ausführen. Legt einen schlanken LXC an,
-# installiert Node.js und richtet den Systemd-Service ein. Der Service wird
-# nur aktiviert, nicht gestartet — das passiert erst mit dem ersten
-# ./deploy-event.sh, wenn tatsächlich Daten und Admin-Passwort vorhanden sind.
-# Danach als Proxmox-Template klonen (siehe README) statt für jedes Event neu
-# zu provisionieren.
+# Einmalige technische Einrichtung auf dem Proxmox-Host. Baut die Vorlage:
+# Node.js installieren, App-Code hineinkopieren, npm install, Dienst
+# aktivieren (nicht starten!) — und wandelt den Container danach automatisch
+# in eine Proxmox-Vorlage um. Ab dann läuft jedes Event ausschließlich über
+# die Proxmox-Weboberfläche (Klonen) und das Admin-Dashboard im Browser.
+# Kein CLI-Zugriff mehr pro Event nötig.
 set -euo pipefail
 
 CTID="${1:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
@@ -40,29 +40,37 @@ sleep 5  # kurz warten, bis Netzwerk im Container steht
 pct exec "$CTID" -- bash -c '
   set -e
   apt-get update -qq
-  apt-get install -y -qq --no-install-recommends nodejs npm
+  apt-get install -y -qq --no-install-recommends nodejs npm unzip
   id -u appuser &>/dev/null || useradd --system --no-create-home --shell /usr/sbin/nologin appuser
   setcap "cap_net_bind_service=+ep" "$(readlink -f "$(command -v node)")"
   mkdir -p /var/www/event
-  chown -R appuser:appuser /var/www/event
 '
+
+echo "Kopiere App-Code in die Vorlage…"
+tar -C "$SCRIPT_DIR/app" -cf - . | pct exec "$CTID" -- tar -C /var/www/event -xf -
+pct exec "$CTID" -- bash -c 'cd /var/www/event && npm install --omit=dev --silent'
+pct exec "$CTID" -- chown -R appuser:appuser /var/www/event
 
 pct push "$CTID" "$SCRIPT_DIR/veranstaltungsapp.service" /etc/systemd/system/veranstaltungsapp.service
 pct exec "$CTID" -- systemctl daemon-reload
 pct exec "$CTID" -- systemctl enable -q veranstaltungsapp
 
-IP=""
-for i in $(seq 1 15); do
-  IP="$(pct exec "$CTID" -- hostname -I 2>/dev/null | awk '{print $1}')"
-  [[ -n "$IP" ]] && break
-  sleep 2
-done
+# Bewusst NICHT starten: Der Dienst legt beim ersten echten Start pro
+# geklontem Container eigene Daten inkl. zufälligem Admin-Passwort an.
+# Würde er hier schon laufen, würden alle Klone dasselbe Passwort erben.
 
-banner "LXC $CTID ($HOSTNAME) ist bereit" \
-  "Läuft noch nicht — der Service startet erst mit dem ersten Deploy." \
+echo "Wandle Container in Proxmox-Vorlage um…"
+pct stop "$CTID"
+sleep 2
+pct template "$CTID"
+
+banner "Vorlage $CTID ($HOSTNAME) ist fertig" \
+  "Ab jetzt läuft jedes Event komplett über die Proxmox-Weboberfläche:" \
   "" \
-  "Nächster Schritt:" \
-  "  cd $SCRIPT_DIR && ./deploy-event.sh $CTID events/<eventordner>" \
+  "  1. Vorlage $CTID rechtsklicken → Klonen → Namen vergeben → Klonen" \
+  "  2. Geklonten Container starten" \
+  "  3. IP im Reiter „Übersicht“ des Containers ablesen, im Browser öffnen" \
+  "  4. Zugangsdaten stehen direkt auf der Startseite (Ersteinrichtung)" \
   "" \
-  "Für Wiederverwendung als Vorlage:" \
-  "  pct template $CTID   (danach per 'pct clone' pro Auftrag vervielfältigen)"
+  "Kein Terminal mehr nötig — Name, Farbe, Kartenbereich, Aussteller," \
+  "Kacheln (ZIP-Upload) und Passwort werden alle im Admin-Dashboard gepflegt."
