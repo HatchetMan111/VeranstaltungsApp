@@ -49,13 +49,24 @@
   </section>
 
   <section id="exhibitors">
-    <h2>Aussteller</h2>
-    <button id="add-exhibitor" class="tool">+ Neuen Aussteller hinzufügen (auf Karte klicken)</button>
+    <h2>Aussteller &amp; Orte</h2>
+    <button id="add-exhibitor" class="tool">+ Punkt hinzufügen (auf Karte klicken)</button>
     <ul id="exhibitor-admin-list"></ul>
   </section>
 
   <div id="exhibitor-form" hidden>
     <h3 id="form-title">Aussteller</h3>
+    <label>Kategorie
+      <select id="ex-category">
+        <option value="aussteller">Aussteller</option>
+        <option value="wc">WC</option>
+        <option value="parkplatz">Parkplatz</option>
+        <option value="erste-hilfe">Erste Hilfe</option>
+        <option value="buehne">Bühne</option>
+        <option value="info">Info-Punkt</option>
+        <option value="ausgang">Ausgang</option>
+      </select>
+    </label>
     <label>Name<input id="ex-name" type="text"></label>
     <label>Beschreibung<textarea id="ex-desc" rows="3"></textarea></label>
     <button id="ex-save" class="primary">Speichern</button>

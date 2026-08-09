@@ -46,8 +46,9 @@ Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
 - Eventname, Akzentfarbe, Webseite-URL
 - Logo (App-Icon) und Titelbild (in der Besucher-Info-Ansicht)
 - Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
-- Aussteller: hinzufügen (auf Karte klicken → Formular ausfüllen), Position ändern,
-  Name/Beschreibung bearbeiten, löschen
+- Aussteller **und Orte** (WC, Parkplatz, Erste Hilfe, Bühne, Info-Punkt, Ausgang): hinzufügen
+  (auf Karte klicken → Kategorie wählen → Formular ausfüllen), Position ändern, bearbeiten,
+  löschen — Orte bekommen eigene Icons auf der Karte und tauchen nicht in der Ausstellerliste auf
 - Programm / Angebote des Tages (Uhrzeit, Titel, Beschreibung — unabhängig von einzelnen
   Ausstellern)
 - Kartenkacheln für den markierten Bereich **automatisch von OpenStreetMap herunterladen**
@@ -62,11 +63,12 @@ heruntergeladenen Tile-Paket.
 
 ## Besucher-Ansicht
 
-Untere Navigationsleiste mit vier Tabs: **Karte** (Ausstellerpunkte + Offline-Kartenausschnitt),
-**Aussteller** (volle Liste, Tippen zentriert die Karte auf den jeweiligen Stand), **Programm**
-(Angebote des Tages) und **Info** (Webseite-Link, Titelbild). Alles läuft als installierbare PWA;
-ein Service Worker cacht App-Shell, Kacheln und alle einmal geladenen Inhalte (auch Logo/Bilder)
-automatisch für den Offline-Betrieb.
+Untere Navigationsleiste mit vier Tabs: **Karte** (Ausstellerpunkte, POI-Icons für WC/Parkplatz/
+Erste Hilfe/etc. und Offline-Kartenausschnitt), **Aussteller** (volle Liste mit ★-Favoriten-Filter,
+Tippen zentriert die Karte auf den jeweiligen Stand), **Programm** (Angebote des Tages) und
+**Info** (Webseite-Link, Titelbild). Favoriten werden rein lokal im Browser gespeichert, kein
+Server-Roundtrip nötig. Alles läuft als installierbare PWA; ein Service Worker cacht App-Shell,
+Kacheln und alle einmal geladenen Inhalte automatisch für den Offline-Betrieb.
 
 ## Kartenkacheln automatisch laden
 

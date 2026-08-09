@@ -155,15 +155,20 @@ app.put('/api/config', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+const KNOWN_CATEGORIES = ['aussteller', 'wc', 'parkplatz', 'erste-hilfe', 'buehne', 'info', 'ausgang'];
+function normalizeCategory(cat) {
+  return KNOWN_CATEGORIES.includes(cat) ? cat : 'aussteller';
+}
+
 app.post('/api/exhibitors', requireAuth, (req, res) => {
-  const { name, description, lat, lng } = req.body;
+  const { name, description, lat, lng, category } = req.body;
   if (!name || typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'name, lat und lng sind Pflicht.' });
   }
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = {
     type: 'Feature',
-    properties: { id: crypto.randomUUID(), name, description: description || '' },
+    properties: { id: crypto.randomUUID(), name, description: description || '', category: normalizeCategory(category) },
     geometry: { type: 'Point', coordinates: [lng, lat] }
   };
   geo.features.push(feature);
@@ -175,9 +180,10 @@ app.put('/api/exhibitors/:id', requireAuth, (req, res) => {
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = geo.features.find((f) => f.properties.id === req.params.id);
   if (!feature) return res.status(404).json({ error: 'Nicht gefunden.' });
-  const { name, description, lat, lng } = req.body;
+  const { name, description, lat, lng, category } = req.body;
   if (name) feature.properties.name = name;
   if (description !== undefined) feature.properties.description = description;
+  if (category !== undefined) feature.properties.category = normalizeCategory(category);
   if (typeof lat === 'number' && typeof lng === 'number') feature.geometry.coordinates = [lng, lat];
   writeJSON(EXHIBITORS_FILE, geo);
   res.json(feature);

@@ -39,6 +39,12 @@ button { font-family: inherit; }
 #map-section { padding: 0; border-bottom: none; }
 #admin-map { height: 45vh; min-height: 320px; }
 
+.poi-icon span {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; background: #fff; border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0,0,0,.3); font-size: 14px;
+}
+
 #exhibitor-admin-list { list-style: none; margin: .8rem 0 0; padding: 0; max-width: 480px; }
 #exhibitor-admin-list li {
   display: flex; justify-content: space-between; align-items: center;

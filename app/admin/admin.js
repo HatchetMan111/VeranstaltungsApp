@@ -1,4 +1,12 @@
 (function () {
+  const CATEGORY_ICONS = { wc: '🚻', parkplatz: '🅿️', 'erste-hilfe': '⛑️', buehne: '🎪', info: 'ℹ️', ausgang: '🚪' };
+  const CATEGORY_LABELS = { aussteller: 'Aussteller', wc: 'WC', parkplatz: 'Parkplatz', 'erste-hilfe': 'Erste Hilfe', buehne: 'Bühne', info: 'Info-Punkt', ausgang: 'Ausgang' };
+  function iconFor(category) {
+    if (!category || category === 'aussteller') return undefined;
+    const emoji = CATEGORY_ICONS[category] || '📍';
+    return L.divIcon({ className: 'poi-icon', html: `<span>${emoji}</span>`, iconSize: [28, 28] });
+  }
+
   let config = null;
   let exhibitorsGeo = null;
   let programData = null;
@@ -66,12 +74,16 @@
 
     exhibitorsGeo.features.forEach((f) => {
       const [lng, lat] = f.geometry.coordinates;
-      const marker = L.marker([lat, lng]).addTo(map).bindPopup(f.properties.name);
+      const opts = iconFor(f.properties.category);
+      const marker = (opts ? L.marker([lat, lng], { icon: opts }) : L.marker([lat, lng])).addTo(map).bindPopup(f.properties.name);
       exhibitorMarkers.set(f.properties.id, marker);
 
       const li = document.createElement('li');
       const span = document.createElement('span');
-      span.textContent = f.properties.name;
+      const label = CATEGORY_LABELS[f.properties.category] || 'Aussteller';
+      span.textContent = f.properties.category && f.properties.category !== 'aussteller'
+        ? `${f.properties.name} (${label})`
+        : f.properties.name;
       li.appendChild(span);
 
       const actions = document.createElement('span');
@@ -195,7 +207,8 @@
   // Aussteller-Formular
   function openExhibitorForm(feature) {
     editingId = feature ? feature.properties.id : null;
-    document.getElementById('form-title').textContent = feature ? 'Aussteller bearbeiten' : 'Neuer Aussteller';
+    document.getElementById('form-title').textContent = feature ? 'Punkt bearbeiten' : 'Neuer Punkt';
+    document.getElementById('ex-category').value = feature ? (feature.properties.category || 'aussteller') : 'aussteller';
     document.getElementById('ex-name').value = feature ? feature.properties.name : '';
     document.getElementById('ex-desc').value = feature ? feature.properties.description : '';
     document.getElementById('exhibitor-form').hidden = false;
@@ -210,20 +223,21 @@
   document.getElementById('ex-save').addEventListener('click', async () => {
     const name = document.getElementById('ex-name').value.trim();
     const description = document.getElementById('ex-desc').value.trim();
+    const category = document.getElementById('ex-category').value;
     const status = document.getElementById('ex-status');
     if (!name) { setStatus(status, 'Name fehlt.', false); return; }
     try {
       if (editingId) {
         const res = await fetch(`/api/exhibitors/${editingId}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description })
+          body: JSON.stringify({ name, description, category })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
       } else {
         if (!pendingLatLng) { setStatus(status, 'Bitte zuerst auf die Karte klicken.', false); return; }
         const res = await fetch('/api/exhibitors', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, lat: pendingLatLng.lat, lng: pendingLatLng.lng })
+          body: JSON.stringify({ name, description, category, lat: pendingLatLng.lat, lng: pendingLatLng.lng })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
       }
