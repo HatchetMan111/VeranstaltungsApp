@@ -51,7 +51,12 @@
     const [lng, lat] = feature.geometry.coordinates;
     const opts = iconFor(p.category);
     const marker = opts ? L.marker([lat, lng], { icon: opts }) : L.marker([lat, lng]);
-    marker.bindPopup(`<strong>${p.name || 'Aussteller'}</strong>${p.description ? `<br>${p.description}` : ''}`);
+    marker.bindPopup(`
+      ${p.imageUrl ? `<img src="${p.imageUrl}" class="popup-img">` : ''}
+      <strong>${p.name || 'Aussteller'}</strong>
+      ${p.offer ? `<div class="popup-offer">${p.offer}</div>` : ''}
+      ${p.description ? `<br>${p.description}` : ''}
+    `);
     marker.addTo(map);
     markers.set(p.id, marker);
   });
@@ -66,13 +71,25 @@
         const marker = markers.get(p.id);
         const li = document.createElement('li');
 
+        const row = document.createElement('div');
+        row.className = 'list-row';
+        if (p.imageUrl) {
+          const thumb = document.createElement('img');
+          thumb.src = p.imageUrl;
+          thumb.className = 'list-thumb';
+          thumb.alt = '';
+          row.appendChild(thumb);
+        }
+
         const textWrap = document.createElement('div');
-        textWrap.innerHTML = `<strong>${p.name}</strong>${p.description ? `<br><span>${p.description}</span>` : ''}`;
+        textWrap.className = 'list-text';
+        textWrap.innerHTML = `<strong>${p.name}</strong>${p.offer ? `<span class="offer-badge">${p.offer}</span>` : ''}${p.description ? `<br><span>${p.description}</span>` : ''}`;
         textWrap.addEventListener('click', () => {
           showView('map');
           map.setView(marker.getLatLng(), config.maxZoom || 19);
           marker.openPopup();
         });
+        row.appendChild(textWrap);
 
         const star = document.createElement('button');
         star.className = 'fav-btn' + (isFavorite(p.id) ? ' active' : '');
@@ -83,7 +100,7 @@
           renderExhibitorList();
         });
 
-        li.appendChild(textWrap);
+        li.appendChild(row);
         li.appendChild(star);
         fullList.appendChild(li);
       });
@@ -108,6 +125,11 @@
 
   // Info
   document.getElementById('info-title').textContent = config.eventName || 'Info';
+  if (config.infoText) {
+    const desc = document.getElementById('info-description');
+    desc.textContent = config.infoText;
+    desc.hidden = false;
+  }
   if (config.websiteUrl) {
     const link = document.getElementById('info-website-link');
     link.href = config.websiteUrl;

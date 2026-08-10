@@ -1,10 +1,14 @@
-const CACHE = 'event-cache-v2';
+const CACHE = 'event-cache-v3';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', '/manifest.json',
   'vendor/leaflet.js', 'vendor/leaflet.css',
   'vendor/images/marker-icon.png', 'vendor/images/marker-icon-2x.png', 'vendor/images/marker-shadow.png',
   '/api/config', '/api/exhibitors', '/api/program'
 ];
+// Diese Endpunkte ändern sich, sobald im Dashboard etwas bearbeitet wird — deshalb
+// Netzwerk zuerst, Cache nur als Offline-Fallback. Alles andere (App-Shell, Kacheln,
+// Bilder) ändert sich praktisch nie und bleibt Cache-zuerst für schnelles Offline-Laden.
+const NETWORK_FIRST_PATHS = ['/api/config', '/api/exhibitors', '/api/program'];
 
 // Standard Slippy-Map-Kachelmathematik: Lat/Lng-Grenzen -> Kachel-Indizes
 function lon2tile(lon, z) { return Math.floor((lon + 180) / 360 * 2 ** z); }
@@ -50,22 +54,38 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-// Cache-first mit Laufzeit-Caching: alles, was einmal online geladen wurde
-// (z. B. Logo, Header-Bild), landet automatisch im Cache für spätere Offline-Besuche.
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached = await caches.match(request);
+    return cached || Response.error();
+  }
+}
+
+async function cacheFirst(request) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return cached || Response.error();
+  }
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  event.respondWith((async () => {
-    const cached = await caches.match(event.request);
-    if (cached) return cached;
-    try {
-      const response = await fetch(event.request);
-      if (response.ok) {
-        const cache = await caches.open(CACHE);
-        cache.put(event.request, response.clone());
-      }
-      return response;
-    } catch {
-      return cached || Response.error();
-    }
-  })());
+  const url = new URL(event.request.url);
+  const isNetworkFirst = NETWORK_FIRST_PATHS.includes(url.pathname);
+  event.respondWith(isNetworkFirst ? networkFirst(event.request) : cacheFirst(event.request));
 });

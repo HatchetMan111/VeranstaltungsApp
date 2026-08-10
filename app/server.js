@@ -38,6 +38,7 @@ function ensureData() {
       eventName: 'Neues Event',
       accentColor: '#c9822b',
       websiteUrl: '',
+      infoText: '',
       logoUrl: '',
       headerImageUrl: '',
       center: [51.1657, 10.4515],
@@ -105,6 +106,9 @@ function setupPageHtml(username, password) {
 
 app.use(express.json());
 
+// Bild-Uploads (Branding + pro Aussteller) teilen sich diese multer-Instanz
+const brandingUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 15 * 1024 * 1024 } });
+
 // Ersteinrichtungs-Seite, solange noch nichts konfiguriert wurde
 app.get('/', (req, res, next) => {
   const cfg = readJSON(CONFIG_FILE);
@@ -161,14 +165,17 @@ function normalizeCategory(cat) {
 }
 
 app.post('/api/exhibitors', requireAuth, (req, res) => {
-  const { name, description, lat, lng, category } = req.body;
+  const { name, description, lat, lng, category, offer } = req.body;
   if (!name || typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'name, lat und lng sind Pflicht.' });
   }
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = {
     type: 'Feature',
-    properties: { id: crypto.randomUUID(), name, description: description || '', category: normalizeCategory(category) },
+    properties: {
+      id: crypto.randomUUID(), name, description: description || '',
+      category: normalizeCategory(category), offer: offer || '', imageUrl: ''
+    },
     geometry: { type: 'Point', coordinates: [lng, lat] }
   };
   geo.features.push(feature);
@@ -180,13 +187,28 @@ app.put('/api/exhibitors/:id', requireAuth, (req, res) => {
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = geo.features.find((f) => f.properties.id === req.params.id);
   if (!feature) return res.status(404).json({ error: 'Nicht gefunden.' });
-  const { name, description, lat, lng, category } = req.body;
+  const { name, description, lat, lng, category, offer } = req.body;
   if (name) feature.properties.name = name;
   if (description !== undefined) feature.properties.description = description;
   if (category !== undefined) feature.properties.category = normalizeCategory(category);
+  if (offer !== undefined) feature.properties.offer = offer;
   if (typeof lat === 'number' && typeof lng === 'number') feature.geometry.coordinates = [lng, lat];
   writeJSON(EXHIBITORS_FILE, geo);
   res.json(feature);
+});
+
+// Bild pro Aussteller/Ort hochladen
+app.post('/api/exhibitors/:id/image', requireAuth, brandingUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
+  const geo = readJSON(EXHIBITORS_FILE);
+  const feature = geo.features.find((f) => f.properties.id === req.params.id);
+  if (!feature) { fs.unlink(req.file.path, () => {}); return res.status(404).json({ error: 'Nicht gefunden.' }); }
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+  const filename = `exhibitor-${req.params.id}-${Date.now()}${ext}`;
+  fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  feature.properties.imageUrl = `/uploads/${filename}`;
+  writeJSON(EXHIBITORS_FILE, geo);
+  res.json({ ok: true, url: feature.properties.imageUrl });
 });
 
 app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
@@ -245,8 +267,6 @@ app.put('/api/admin/password', requireAuth, (req, res) => {
 });
 
 // Logo/Header-Bild hochladen
-const brandingUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 15 * 1024 * 1024 } });
-
 function saveBrandingImage(req, res, configField) {
   if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
   const ext = path.extname(req.file.originalname).toLowerCase() || '.png';

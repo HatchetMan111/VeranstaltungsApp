@@ -48,6 +48,7 @@
     document.getElementById('eventName').value = config.eventName || '';
     document.getElementById('accentColor').value = config.accentColor || '#c9822b';
     document.getElementById('websiteUrl').value = config.websiteUrl || '';
+    document.getElementById('infoText').value = config.infoText || '';
 
     if (config.logoUrl) {
       const img = document.getElementById('logo-preview');
@@ -165,6 +166,7 @@
     config.eventName = document.getElementById('eventName').value.trim();
     config.accentColor = document.getElementById('accentColor').value;
     config.websiteUrl = document.getElementById('websiteUrl').value.trim();
+    config.infoText = document.getElementById('infoText').value.trim();
     const status = document.getElementById('settings-status');
     try {
       const res = await fetch('/api/config', {
@@ -211,6 +213,20 @@
     document.getElementById('ex-category').value = feature ? (feature.properties.category || 'aussteller') : 'aussteller';
     document.getElementById('ex-name').value = feature ? feature.properties.name : '';
     document.getElementById('ex-desc').value = feature ? feature.properties.description : '';
+    document.getElementById('ex-offer').value = feature ? (feature.properties.offer || '') : '';
+
+    const imgSection = document.getElementById('ex-image-section');
+    imgSection.hidden = !editingId;
+    const preview = document.getElementById('ex-image-preview');
+    if (feature && feature.properties.imageUrl) {
+      preview.src = feature.properties.imageUrl;
+      preview.hidden = false;
+    } else {
+      preview.hidden = true;
+    }
+    document.getElementById('ex-image-file').value = '';
+    document.getElementById('ex-image-status').textContent = '';
+
     document.getElementById('exhibitor-form').hidden = false;
   }
   document.getElementById('ex-cancel').addEventListener('click', closeExhibitorForm);
@@ -224,26 +240,56 @@
     const name = document.getElementById('ex-name').value.trim();
     const description = document.getElementById('ex-desc').value.trim();
     const category = document.getElementById('ex-category').value;
+    const offer = document.getElementById('ex-offer').value.trim();
     const status = document.getElementById('ex-status');
     if (!name) { setStatus(status, 'Name fehlt.', false); return; }
     try {
+      let saved;
       if (editingId) {
         const res = await fetch(`/api/exhibitors/${editingId}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, category })
+          body: JSON.stringify({ name, description, category, offer })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
+        saved = await res.json();
       } else {
         if (!pendingLatLng) { setStatus(status, 'Bitte zuerst auf die Karte klicken.', false); return; }
         const res = await fetch('/api/exhibitors', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, description, category, lat: pendingLatLng.lat, lng: pendingLatLng.lng })
+          body: JSON.stringify({ name, description, category, offer, lat: pendingLatLng.lat, lng: pendingLatLng.lng })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
+        saved = await res.json();
       }
       exhibitorsGeo = await (await fetch('/api/exhibitors')).json();
       renderExhibitors();
-      closeExhibitorForm();
+      setStatus(status, 'Gespeichert.', true);
+      // Formular bleibt offen, jetzt im Bearbeiten-Modus — so ist direkt danach ein
+      // Bild-Upload möglich, auch wenn der Punkt gerade erst neu angelegt wurde.
+      openExhibitorForm(saved);
+      pendingLatLng = null;
+    } catch (err) {
+      setStatus(status, err.message, false);
+    }
+  });
+
+  document.getElementById('ex-image-upload').addEventListener('click', async () => {
+    const fileInput = document.getElementById('ex-image-file');
+    const status = document.getElementById('ex-image-status');
+    if (!editingId) { setStatus(status, 'Bitte zuerst speichern.', false); return; }
+    if (!fileInput.files[0]) { setStatus(status, 'Bitte zuerst eine Datei auswählen.', false); return; }
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]);
+    setStatus(status, 'Lade hoch …', true);
+    try {
+      const res = await fetch(`/api/exhibitors/${editingId}/image`, { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Fehler');
+      const preview = document.getElementById('ex-image-preview');
+      preview.src = data.url + '?t=' + Date.now();
+      preview.hidden = false;
+      setStatus(status, 'Hochgeladen.', true);
+      exhibitorsGeo = await (await fetch('/api/exhibitors')).json();
     } catch (err) {
       setStatus(status, err.message, false);
     }

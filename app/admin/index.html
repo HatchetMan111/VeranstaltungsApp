@@ -18,6 +18,7 @@
     <label>Name<input id="eventName" type="text"></label>
     <label>Akzentfarbe<input id="accentColor" type="color"></label>
     <label>Webseite-URL (optional)<input id="websiteUrl" type="url" placeholder="https://…"></label>
+    <label>Beschreibung (erscheint auf der Info-Seite der App)<textarea id="infoText" rows="4" placeholder="Öffnungszeiten, Adresse, Anfahrt, worum es bei dem Event geht …"></textarea></label>
 
     <div class="map-tools">
       <button data-mode="center" class="tool">Kartenmitte setzen</button>
@@ -69,6 +70,13 @@
     </label>
     <label>Name<input id="ex-name" type="text"></label>
     <label>Beschreibung<textarea id="ex-desc" rows="3"></textarea></label>
+    <label>Angebot des Tages (optional)<input id="ex-offer" type="text" placeholder="z. B. 20 % auf Lederwaren"></label>
+    <div id="ex-image-section" hidden>
+      <label>Bild<input id="ex-image-file" type="file" accept="image/*"></label>
+      <button id="ex-image-upload" class="tool">Bild hochladen</button>
+      <span id="ex-image-status" class="status"></span>
+      <div><img id="ex-image-preview" hidden></div>
+    </div>
     <button id="ex-save" class="primary">Speichern</button>
     <button id="ex-cancel">Abbrechen</button>
     <span id="ex-status" class="status"></span>

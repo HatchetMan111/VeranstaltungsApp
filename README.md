@@ -43,12 +43,15 @@ Falls das Repo schon lokal liegt, geht es auch direkt ohne erneutes Klonen:
 
 Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
 
-- Eventname, Akzentfarbe, Webseite-URL
+- Eventname, Akzentfarbe, Webseite-URL, freier **Beschreibungstext** (Öffnungszeiten, Adresse,
+  worum es geht — erscheint auf der Info-Seite der App)
 - Logo (App-Icon) und Titelbild (in der Besucher-Info-Ansicht)
 - Kartenmitte und Offline-Bereich (Südwest-/Nordost-Ecke) per Klick auf die Karte
 - Aussteller **und Orte** (WC, Parkplatz, Erste Hilfe, Bühne, Info-Punkt, Ausgang): hinzufügen
   (auf Karte klicken → Kategorie wählen → Formular ausfüllen), Position ändern, bearbeiten,
-  löschen — Orte bekommen eigene Icons auf der Karte und tauchen nicht in der Ausstellerliste auf
+  löschen — Orte bekommen eigene Icons auf der Karte und tauchen nicht in der Ausstellerliste auf.
+  Aussteller können zusätzlich ein **Bild** und ein **Angebot des Tages** bekommen (Bild-Upload
+  erscheint im Formular, sobald der Punkt einmal gespeichert wurde)
 - Programm / Angebote des Tages (Uhrzeit, Titel, Beschreibung — unabhängig von einzelnen
   Ausstellern)
 - Kartenkacheln für den markierten Bereich **automatisch von OpenStreetMap herunterladen**
@@ -57,9 +60,12 @@ Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
 - Admin-Passwort ändern — am besten gleich zu Beginn, bevor die Adresse öffentlich
   (z. B. über Cloudflare) erreichbar gemacht wird
 
-Änderungen wirken sofort auf der Besucher-Ansicht. Für die Admin-Karte werden Live-OSM-Kacheln
-genutzt (Internet vorausgesetzt); die Besucher-Ansicht läuft weiterhin komplett offline mit dem
-heruntergeladenen Tile-Paket.
+Änderungen wirken **sofort** auf der Besucher-Ansicht — der Service Worker lädt Eventdaten
+(Name, Kartenausschnitt, Aussteller, Programm) immer zuerst frisch vom Server und cacht sie nur
+als Offline-Fallback. Nur App-Shell, Kacheln und Bilder bleiben Cache-zuerst, weil die sich
+praktisch nie ändern. Für die Admin-Karte werden Live-OSM-Kacheln genutzt (Internet
+vorausgesetzt); die Besucher-Ansicht läuft weiterhin komplett offline mit dem heruntergeladenen
+Tile-Paket.
 
 ## Besucher-Ansicht
 
