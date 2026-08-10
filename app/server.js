@@ -106,8 +106,21 @@ function setupPageHtml(username, password) {
 
 app.use(express.json());
 
-// Bild-Uploads (Branding + pro Aussteller) teilen sich diese multer-Instanz
-const brandingUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 15 * 1024 * 1024 } });
+// Bild-Uploads (Branding + pro Aussteller) teilen sich diese multer-Instanz — nur echte Bilder
+const IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const brandingUpload = multer({
+  dest: TMP_UPLOAD_DIR,
+  limits: { fileSize: 15 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, IMAGE_MIME_TYPES.includes(file.mimetype))
+});
+
+// Hilfsfunktion: eine zuvor hochgeladene Datei unter /uploads/ wieder entfernen
+// (z. B. beim Ersetzen eines Logos oder Löschen eines Ausstellers) — verhindert,
+// dass sich über eine Saison mit vielen Events verwaiste Dateien ansammeln.
+function deleteUploadedFile(url) {
+  if (!url || !url.startsWith('/uploads/')) return;
+  fs.unlink(path.join(UPLOADS_DIR, path.basename(url)), () => {});
+}
 
 // Ersteinrichtungs-Seite, solange noch nichts konfiguriert wurde
 app.get('/', (req, res, next) => {
@@ -199,13 +212,14 @@ app.put('/api/exhibitors/:id', requireAuth, (req, res) => {
 
 // Bild pro Aussteller/Ort hochladen
 app.post('/api/exhibitors/:id/image', requireAuth, brandingUpload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder ungültiger Dateityp (nur Bilder erlaubt).' });
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = geo.features.find((f) => f.properties.id === req.params.id);
   if (!feature) { fs.unlink(req.file.path, () => {}); return res.status(404).json({ error: 'Nicht gefunden.' }); }
   const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
   const filename = `exhibitor-${req.params.id}-${Date.now()}${ext}`;
   fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  deleteUploadedFile(feature.properties.imageUrl);
   feature.properties.imageUrl = `/uploads/${filename}`;
   writeJSON(EXHIBITORS_FILE, geo);
   res.json({ ok: true, url: feature.properties.imageUrl });
@@ -213,10 +227,12 @@ app.post('/api/exhibitors/:id/image', requireAuth, brandingUpload.single('image'
 
 app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
   const geo = readJSON(EXHIBITORS_FILE);
+  const toDelete = geo.features.find((f) => f.properties.id === req.params.id);
   const before = geo.features.length;
   geo.features = geo.features.filter((f) => f.properties.id !== req.params.id);
   if (geo.features.length === before) return res.status(404).json({ error: 'Nicht gefunden.' });
   writeJSON(EXHIBITORS_FILE, geo);
+  if (toDelete) deleteUploadedFile(toDelete.properties.imageUrl);
   res.json({ ok: true });
 });
 
@@ -268,11 +284,12 @@ app.put('/api/admin/password', requireAuth, (req, res) => {
 
 // Logo/Header-Bild hochladen
 function saveBrandingImage(req, res, configField) {
-  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder ungültiger Dateityp (nur Bilder erlaubt).' });
   const ext = path.extname(req.file.originalname).toLowerCase() || '.png';
   const filename = `${configField}-${Date.now()}${ext}`;
   fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
   const cfg = readJSON(CONFIG_FILE);
+  deleteUploadedFile(cfg[configField]);
   cfg[configField] = `/uploads/${filename}`;
   writeJSON(CONFIG_FILE, cfg);
   res.json({ ok: true, url: cfg[configField] });
@@ -286,10 +303,14 @@ app.post('/api/branding/header', requireAuth, brandingUpload.single('image'), (r
 });
 
 // Kartenkacheln: manueller ZIP-Upload …
-const tileUpload = multer({ dest: TMP_UPLOAD_DIR, limits: { fileSize: 200 * 1024 * 1024 } });
+const tileUpload = multer({
+  dest: TMP_UPLOAD_DIR,
+  limits: { fileSize: 200 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => cb(null, file.originalname.toLowerCase().endsWith('.zip'))
+});
 
 app.post('/api/tiles', requireAuth, tileUpload.single('tiles'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten.' });
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder keine ZIP-Datei.' });
   execFile('unzip', ['-o', req.file.path, '-d', TILES_DIR], (err) => {
     fs.unlink(req.file.path, () => {});
     if (err) return res.status(500).json({ error: 'Entpacken fehlgeschlagen — ist es eine gültige ZIP-Datei?' });

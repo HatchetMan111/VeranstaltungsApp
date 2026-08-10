@@ -352,8 +352,12 @@
   }
 
   // Kartenkacheln
-  document.getElementById('download-tiles').addEventListener('click', async () => {
+  document.getElementById('download-tiles').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
     const status = document.getElementById('tiles-download-status');
+    btn.disabled = true;
+    const originalText = btn.textContent;
+    btn.textContent = 'Lädt herunter …';
     setStatus(status, 'Lädt herunter, das kann bis zu einer Minute dauern …', true);
     try {
       const res = await fetch('/api/tiles/download', { method: 'POST' });
@@ -362,6 +366,9 @@
       setStatus(status, `Fertig: ${data.downloaded} von ${data.total} Kacheln geladen.`, true);
     } catch (err) {
       setStatus(status, err.message, false);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
     }
   });
   document.getElementById('upload-tiles').addEventListener('click', async () => {

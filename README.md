@@ -103,9 +103,11 @@ DNS-CNAME. Container selbst bleibt auf HTTP, TLS übernimmt Cloudflare an der Ed
 
 Node.js + Express, ein einziger Prozess (systemd-Service `veranstaltungsapp`, läuft als
 unprivilegierter `appuser` mit `cap_net_bind_service` für Port 80). Daten liegen als
-`config.json` / `exhibitors.geojson` / `admin.json` auf der Container-Platte, keine Datenbank.
-Jeder Container ist unabhängig — kein gemeinsamer Zustand, keine Vorlage, kein Klonen nötig;
-`provision-lxc.sh` baut jedes Mal frisch.
+`config.json` / `exhibitors.geojson` / `program.json` / `admin.json` auf der Container-Platte,
+keine Datenbank. Jeder Container ist unabhängig — kein gemeinsamer Zustand, keine Vorlage, kein
+Klonen nötig; `provision-lxc.sh` baut jedes Mal frisch. Nutzergenerierte Texte werden auf der
+Besucher-Seite HTML-escaped ausgegeben, Bild-Uploads sind auf echte Bildtypen beschränkt, alte
+Dateien werden beim Ersetzen/Löschen automatisch aufgeräumt.
 
 ## Dimensionierung
 

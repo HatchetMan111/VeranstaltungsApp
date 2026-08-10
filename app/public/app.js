@@ -2,6 +2,12 @@
   const CATEGORY_ICONS = { wc: '🚻', parkplatz: '🅿️', 'erste-hilfe': '⛑️', buehne: '🎪', info: 'ℹ️', ausgang: '🚪' };
   const FAVORITES_KEY = 'event-favorites';
 
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
   function getFavorites() {
     try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; }
   }
@@ -52,10 +58,10 @@
     const opts = iconFor(p.category);
     const marker = opts ? L.marker([lat, lng], { icon: opts }) : L.marker([lat, lng]);
     marker.bindPopup(`
-      ${p.imageUrl ? `<img src="${p.imageUrl}" class="popup-img">` : ''}
-      <strong>${p.name || 'Aussteller'}</strong>
-      ${p.offer ? `<div class="popup-offer">${p.offer}</div>` : ''}
-      ${p.description ? `<br>${p.description}` : ''}
+      ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" class="popup-img">` : ''}
+      <strong>${escapeHtml(p.name || 'Aussteller')}</strong>
+      ${p.offer ? `<div class="popup-offer">${escapeHtml(p.offer)}</div>` : ''}
+      ${p.description ? `<br>${escapeHtml(p.description)}` : ''}
     `);
     marker.addTo(map);
     markers.set(p.id, marker);
@@ -73,6 +79,12 @@
 
         const row = document.createElement('div');
         row.className = 'list-row';
+        row.addEventListener('click', () => {
+          showView('map');
+          map.setView(marker.getLatLng(), config.maxZoom || 19);
+          marker.openPopup();
+        });
+
         if (p.imageUrl) {
           const thumb = document.createElement('img');
           thumb.src = p.imageUrl;
@@ -83,12 +95,7 @@
 
         const textWrap = document.createElement('div');
         textWrap.className = 'list-text';
-        textWrap.innerHTML = `<strong>${p.name}</strong>${p.offer ? `<span class="offer-badge">${p.offer}</span>` : ''}${p.description ? `<br><span>${p.description}</span>` : ''}`;
-        textWrap.addEventListener('click', () => {
-          showView('map');
-          map.setView(marker.getLatLng(), config.maxZoom || 19);
-          marker.openPopup();
-        });
+        textWrap.innerHTML = `<strong>${escapeHtml(p.name)}</strong>${p.offer ? `<span class="offer-badge">${escapeHtml(p.offer)}</span>` : ''}${p.description ? `<br><span>${escapeHtml(p.description)}</span>` : ''}`;
         row.appendChild(textWrap);
 
         const star = document.createElement('button');
@@ -119,7 +126,7 @@
   const programList = document.getElementById('program-list');
   program.items.forEach((item) => {
     const li = document.createElement('li');
-    li.innerHTML = `${item.time ? `<span class="time">${item.time}</span>` : ''}<strong>${item.title}</strong>${item.description ? `<br><span>${item.description}</span>` : ''}`;
+    li.innerHTML = `${item.time ? `<span class="time">${escapeHtml(item.time)}</span>` : ''}<strong>${escapeHtml(item.title)}</strong>${item.description ? `<br><span>${escapeHtml(item.description)}</span>` : ''}`;
     programList.appendChild(li);
   });
 
