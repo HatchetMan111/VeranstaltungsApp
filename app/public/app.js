@@ -57,11 +57,14 @@
     const [lng, lat] = feature.geometry.coordinates;
     const opts = iconFor(p.category);
     const marker = opts ? L.marker([lat, lng], { icon: opts }) : L.marker([lat, lng]);
+    const isExhibitor = !p.category || p.category === 'aussteller';
     marker.bindPopup(`
       ${p.imageUrl ? `<img src="${escapeHtml(p.imageUrl)}" class="popup-img">` : ''}
       <strong>${escapeHtml(p.name || 'Aussteller')}</strong>
+      ${p.branche ? `<div class="popup-branche">${escapeHtml(p.branche)}</div>` : ''}
       ${p.offer ? `<div class="popup-offer">${escapeHtml(p.offer)}</div>` : ''}
       ${p.description ? `<br>${escapeHtml(p.description)}` : ''}
+      ${isExhibitor ? `<br><a href="#" class="open-detail-link" data-id="${escapeHtml(p.id)}">Mehr erfahren →</a>` : ''}
     `);
     marker.addTo(map);
     markers.set(p.id, marker);
@@ -79,11 +82,7 @@
 
         const row = document.createElement('div');
         row.className = 'list-row';
-        row.addEventListener('click', () => {
-          showView('map');
-          map.setView(marker.getLatLng(), config.maxZoom || 19);
-          marker.openPopup();
-        });
+        row.addEventListener('click', () => showExhibitorDetail(p.id));
 
         if (p.imageUrl) {
           const thumb = document.createElement('img');
@@ -128,6 +127,23 @@
     const li = document.createElement('li');
     li.innerHTML = `${item.time ? `<span class="time">${escapeHtml(item.time)}</span>` : ''}<strong>${escapeHtml(item.title)}</strong>${item.description ? `<br><span>${escapeHtml(item.description)}</span>` : ''}`;
     programList.appendChild(li);
+
+    if (typeof item.lat === 'number' && typeof item.lng === 'number') {
+      const marker = L.marker([item.lat, item.lng], {
+        icon: L.divIcon({ className: 'poi-icon', html: '<span>📅</span>', iconSize: [30, 30] })
+      }).addTo(map);
+      marker.bindPopup(`
+        ${item.imageUrl ? `<img src="${escapeHtml(item.imageUrl)}" class="popup-img">` : ''}
+        ${item.time ? `<span class="time">${escapeHtml(item.time)}</span> ` : ''}<strong>${escapeHtml(item.title)}</strong>
+        ${item.description ? `<br>${escapeHtml(item.description)}` : ''}
+      `);
+      li.style.cursor = 'pointer';
+      li.addEventListener('click', () => {
+        showView('map');
+        map.setView(marker.getLatLng(), config.maxZoom || 19);
+        marker.openPopup();
+      });
+    }
   });
 
   // Info
@@ -148,6 +164,59 @@
     img.src = config.headerImageUrl;
     img.hidden = false;
   }
+  if (Array.isArray(config.galleryImages) && config.galleryImages.length) {
+    const gallery = document.getElementById('info-gallery');
+    config.galleryImages.forEach((url) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = '';
+      gallery.appendChild(img);
+    });
+  }
+
+  // Aussteller-Detailseite ("Unternehmensseite")
+  let returnView = 'map';
+  function showExhibitorDetail(id) {
+    const feature = geo.features.find((f) => f.properties.id === id);
+    if (!feature) return;
+    const p = feature.properties;
+    const active = document.querySelector('.view.active');
+    returnView = active ? active.id.replace('view-', '') : 'map';
+
+    const img = document.getElementById('detail-image');
+    if (p.imageUrl) { img.src = p.imageUrl; img.hidden = false; } else { img.hidden = true; }
+
+    const logo = document.getElementById('detail-logo');
+    if (p.logoUrl) { logo.src = p.logoUrl; logo.hidden = false; } else { logo.hidden = true; }
+
+    document.getElementById('detail-name').textContent = p.name || '';
+
+    const branche = document.getElementById('detail-branche');
+    if (p.branche) { branche.textContent = p.branche; branche.hidden = false; } else { branche.hidden = true; }
+
+    const offer = document.getElementById('detail-offer');
+    if (p.offer) { offer.textContent = p.offer; offer.hidden = false; } else { offer.hidden = true; }
+
+    const desc = document.getElementById('detail-description');
+    if (p.description) { desc.textContent = p.description; desc.hidden = false; } else { desc.hidden = true; }
+
+    const website = document.getElementById('detail-website');
+    if (p.website) { website.href = p.website; website.hidden = false; } else { website.hidden = true; }
+
+    const phone = document.getElementById('detail-phone');
+    if (p.phone) {
+      phone.href = 'tel:' + p.phone.replace(/\s+/g, '');
+      phone.textContent = '📞 ' + p.phone;
+      phone.hidden = false;
+    } else { phone.hidden = true; }
+
+    showView('exhibitor-detail');
+  }
+  document.getElementById('detail-back').addEventListener('click', () => showView(returnView));
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('.open-detail-link');
+    if (link) { e.preventDefault(); showExhibitorDetail(link.dataset.id); }
+  });
 
   // Untere Navigation
   function showView(name) {

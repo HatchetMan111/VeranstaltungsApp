@@ -47,6 +47,11 @@
     <button id="upload-header" class="tool">Titelbild hochladen</button>
     <span id="header-status" class="status"></span>
     <div id="header-preview-wrap"><img id="header-preview" hidden></div>
+
+    <label style="margin-top:1rem">Weitere Bilder für die Info-Seite (beliebig viele)<input id="gallery-file" type="file" accept="image/*"></label>
+    <button id="upload-gallery" class="tool">Zur Galerie hinzufügen</button>
+    <span id="gallery-status" class="status"></span>
+    <div id="gallery-preview-wrap"></div>
   </section>
 
   <section id="exhibitors">
@@ -73,11 +78,21 @@
     <div id="ex-offer-field">
       <label>Angebot des Tages (optional)<input id="ex-offer" type="text" placeholder="z. B. 20 % auf Lederwaren"></label>
     </div>
+    <div id="ex-company-fields">
+      <label>Branche (optional)<input id="ex-branche" type="text" placeholder="z. B. Landmaschinen, Einzelhandel"></label>
+      <label>Webseite (optional)<input id="ex-website" type="url" placeholder="https://…"></label>
+      <label>Telefonnummer (optional)<input id="ex-phone" type="tel" placeholder="z. B. 09341 12345"></label>
+    </div>
     <div id="ex-image-section" hidden>
-      <label>Bild<input id="ex-image-file" type="file" accept="image/*"></label>
-      <button id="ex-image-upload" class="tool">Bild hochladen</button>
+      <label>Hauptbild<input id="ex-image-file" type="file" accept="image/*"></label>
+      <button id="ex-image-upload" class="tool">Hauptbild hochladen</button>
       <span id="ex-image-status" class="status"></span>
       <div><img id="ex-image-preview" hidden></div>
+
+      <label style="margin-top:.8rem">Firmenlogo<input id="ex-logo-file" type="file" accept="image/*"></label>
+      <button id="ex-logo-upload" class="tool">Logo hochladen</button>
+      <span id="ex-logo-status" class="status"></span>
+      <div><img id="ex-logo-preview" hidden></div>
     </div>
     <button id="ex-save" class="primary">Speichern</button>
     <button id="ex-cancel">Abbrechen</button>
@@ -95,6 +110,20 @@
     <label>Uhrzeit (optional)<input id="pg-time" type="time"></label>
     <label>Titel<input id="pg-title" type="text"></label>
     <label>Beschreibung<textarea id="pg-desc" rows="3"></textarea></label>
+
+    <div class="map-tools">
+      <button id="pg-set-location" type="button" class="tool">Standort auf Karte setzen (optional)</button>
+      <button id="pg-clear-location" type="button" class="tool">Standort entfernen</button>
+    </div>
+    <p id="pg-location-status" class="hint">Kein Standort gesetzt.</p>
+
+    <div id="pg-image-section" hidden>
+      <label>Bild (optional)<input id="pg-image-file" type="file" accept="image/*"></label>
+      <button id="pg-image-upload" class="tool">Bild hochladen</button>
+      <span id="pg-image-status" class="status"></span>
+      <div><img id="pg-image-preview" hidden></div>
+    </div>
+
     <button id="pg-save" class="primary">Speichern</button>
     <button id="pg-cancel">Abbrechen</button>
     <span id="pg-status" class="status"></span>

@@ -13,7 +13,7 @@ section { padding: 1rem 1.2rem; border-bottom: 1px solid #eee; }
 h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .04em; color: #666; margin: 0 0 .8rem; }
 
 label { display: block; margin-bottom: .7rem; font-size: .9rem; }
-input[type=text], textarea {
+input[type=text], input[type=url], input[type=tel], input[type=time], textarea {
   display: block; width: 100%; max-width: 420px; margin-top: .3rem;
   padding: .5rem .6rem; border: 1px solid #ccc; border-radius: 6px; font-size: .95rem;
 }
@@ -69,3 +69,14 @@ button { font-family: inherit; }
 
 #exhibitor-form { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 2px solid var(--accent); padding: 1rem 1.2rem; box-shadow: 0 -2px 10px rgba(0,0,0,.1); max-height: 70vh; overflow-y: auto; }
 #ex-image-preview { max-width: 160px; border-radius: 8px; margin-top: .5rem; display: block; }
+#ex-logo-preview { height: 60px; width: 60px; object-fit: cover; border-radius: 8px; margin-top: .5rem; display: block; }
+#pg-image-preview { max-width: 160px; border-radius: 8px; margin-top: .5rem; display: block; }
+#pg-location-status { margin: .3rem 0 .8rem; }
+
+#gallery-preview-wrap { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .6rem; }
+.gallery-thumb-wrap { position: relative; }
+.gallery-thumb-wrap img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid #ddd; display: block; }
+.gallery-thumb-wrap button {
+  position: absolute; top: -6px; right: -6px; background: #c62828; color: #fff; border: none;
+  border-radius: 50%; width: 20px; height: 20px; font-size: .7rem; line-height: 1; cursor: pointer;
+}

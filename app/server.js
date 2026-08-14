@@ -41,6 +41,7 @@ function ensureData() {
       infoText: '',
       logoUrl: '',
       headerImageUrl: '',
+      galleryImages: [],
       center: [51.1657, 10.4515],
       defaultZoom: 6,
       minZoom: 15,
@@ -168,6 +169,7 @@ app.put('/api/config', requireAuth, (req, res) => {
   cfg.setupComplete = true;
   cfg.logoUrl = cfg.logoUrl || current.logoUrl || '';
   cfg.headerImageUrl = cfg.headerImageUrl || current.headerImageUrl || '';
+  cfg.galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : (current.galleryImages || []);
   writeJSON(CONFIG_FILE, cfg);
   res.json({ ok: true });
 });
@@ -178,7 +180,7 @@ function normalizeCategory(cat) {
 }
 
 app.post('/api/exhibitors', requireAuth, (req, res) => {
-  const { name, description, lat, lng, category, offer } = req.body;
+  const { name, description, lat, lng, category, offer, website, phone, branche } = req.body;
   if (!name || typeof lat !== 'number' || typeof lng !== 'number') {
     return res.status(400).json({ error: 'name, lat und lng sind Pflicht.' });
   }
@@ -187,7 +189,8 @@ app.post('/api/exhibitors', requireAuth, (req, res) => {
     type: 'Feature',
     properties: {
       id: crypto.randomUUID(), name, description: description || '',
-      category: normalizeCategory(category), offer: offer || '', imageUrl: ''
+      category: normalizeCategory(category), offer: offer || '', imageUrl: '',
+      logoUrl: '', website: website || '', phone: phone || '', branche: branche || ''
     },
     geometry: { type: 'Point', coordinates: [lng, lat] }
   };
@@ -200,11 +203,14 @@ app.put('/api/exhibitors/:id', requireAuth, (req, res) => {
   const geo = readJSON(EXHIBITORS_FILE);
   const feature = geo.features.find((f) => f.properties.id === req.params.id);
   if (!feature) return res.status(404).json({ error: 'Nicht gefunden.' });
-  const { name, description, lat, lng, category, offer } = req.body;
+  const { name, description, lat, lng, category, offer, website, phone, branche } = req.body;
   if (name) feature.properties.name = name;
   if (description !== undefined) feature.properties.description = description;
   if (category !== undefined) feature.properties.category = normalizeCategory(category);
   if (offer !== undefined) feature.properties.offer = offer;
+  if (website !== undefined) feature.properties.website = website;
+  if (phone !== undefined) feature.properties.phone = phone;
+  if (branche !== undefined) feature.properties.branche = branche;
   if (typeof lat === 'number' && typeof lng === 'number') feature.geometry.coordinates = [lng, lat];
   writeJSON(EXHIBITORS_FILE, geo);
   res.json(feature);
@@ -225,6 +231,21 @@ app.post('/api/exhibitors/:id/image', requireAuth, brandingUpload.single('image'
   res.json({ ok: true, url: feature.properties.imageUrl });
 });
 
+// Firmenlogo pro Aussteller (separat vom Hauptbild) hochladen
+app.post('/api/exhibitors/:id/logo', requireAuth, brandingUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder ungültiger Dateityp (nur Bilder erlaubt).' });
+  const geo = readJSON(EXHIBITORS_FILE);
+  const feature = geo.features.find((f) => f.properties.id === req.params.id);
+  if (!feature) { fs.unlink(req.file.path, () => {}); return res.status(404).json({ error: 'Nicht gefunden.' }); }
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+  const filename = `exhibitor-logo-${req.params.id}-${Date.now()}${ext}`;
+  fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  deleteUploadedFile(feature.properties.logoUrl);
+  feature.properties.logoUrl = `/uploads/${filename}`;
+  writeJSON(EXHIBITORS_FILE, geo);
+  res.json({ ok: true, url: feature.properties.logoUrl });
+});
+
 app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
   const geo = readJSON(EXHIBITORS_FILE);
   const toDelete = geo.features.find((f) => f.properties.id === req.params.id);
@@ -232,7 +253,7 @@ app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
   geo.features = geo.features.filter((f) => f.properties.id !== req.params.id);
   if (geo.features.length === before) return res.status(404).json({ error: 'Nicht gefunden.' });
   writeJSON(EXHIBITORS_FILE, geo);
-  if (toDelete) deleteUploadedFile(toDelete.properties.imageUrl);
+  if (toDelete) { deleteUploadedFile(toDelete.properties.imageUrl); deleteUploadedFile(toDelete.properties.logoUrl); }
   res.json({ ok: true });
 });
 
@@ -249,10 +270,14 @@ function sortProgram(items) {
 
 // Programm / Angebote des Tages
 app.post('/api/program', requireAuth, (req, res) => {
-  const { time, title, description } = req.body;
+  const { time, title, description, lat, lng } = req.body;
   if (!title) return res.status(400).json({ error: 'title ist Pflicht.' });
   const program = readJSON(PROGRAM_FILE);
-  const item = { id: crypto.randomUUID(), time: time || '', title, description: description || '' };
+  const item = {
+    id: crypto.randomUUID(), time: time || '', title, description: description || '',
+    lat: typeof lat === 'number' ? lat : null, lng: typeof lng === 'number' ? lng : null,
+    imageUrl: ''
+  };
   program.items.push(item);
   sortProgram(program.items);
   writeJSON(PROGRAM_FILE, program);
@@ -263,21 +288,39 @@ app.put('/api/program/:id', requireAuth, (req, res) => {
   const program = readJSON(PROGRAM_FILE);
   const item = program.items.find((i) => i.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'Nicht gefunden.' });
-  const { time, title, description } = req.body;
+  const { time, title, description, lat, lng } = req.body;
   if (title) item.title = title;
   if (time !== undefined) item.time = time;
   if (description !== undefined) item.description = description;
+  if (typeof lat === 'number' && typeof lng === 'number') { item.lat = lat; item.lng = lng; }
   sortProgram(program.items);
   writeJSON(PROGRAM_FILE, program);
   res.json(item);
 });
 
+// Bild pro Programmpunkt hochladen
+app.post('/api/program/:id/image', requireAuth, brandingUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder ungültiger Dateityp (nur Bilder erlaubt).' });
+  const program = readJSON(PROGRAM_FILE);
+  const item = program.items.find((i) => i.id === req.params.id);
+  if (!item) { fs.unlink(req.file.path, () => {}); return res.status(404).json({ error: 'Nicht gefunden.' }); }
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+  const filename = `program-${req.params.id}-${Date.now()}${ext}`;
+  fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  deleteUploadedFile(item.imageUrl);
+  item.imageUrl = `/uploads/${filename}`;
+  writeJSON(PROGRAM_FILE, program);
+  res.json({ ok: true, url: item.imageUrl });
+});
+
 app.delete('/api/program/:id', requireAuth, (req, res) => {
   const program = readJSON(PROGRAM_FILE);
+  const toDelete = program.items.find((i) => i.id === req.params.id);
   const before = program.items.length;
   program.items = program.items.filter((i) => i.id !== req.params.id);
   if (program.items.length === before) return res.status(404).json({ error: 'Nicht gefunden.' });
   writeJSON(PROGRAM_FILE, program);
+  if (toDelete) deleteUploadedFile(toDelete.imageUrl);
   res.json({ ok: true });
 });
 
@@ -311,6 +354,29 @@ app.post('/api/branding/logo', requireAuth, brandingUpload.single('image'), (req
 });
 app.post('/api/branding/header', requireAuth, brandingUpload.single('image'), (req, res) => {
   saveBrandingImage(req, res, 'headerImageUrl');
+});
+
+// Galerie für die Info-Seite: beliebig viele Bilder, einzeln hinzu-/entfernbar
+app.post('/api/branding/gallery', requireAuth, brandingUpload.single('image'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Keine Datei erhalten oder ungültiger Dateityp (nur Bilder erlaubt).' });
+  const ext = path.extname(req.file.originalname).toLowerCase() || '.jpg';
+  const filename = `gallery-${Date.now()}${ext}`;
+  fs.renameSync(req.file.path, path.join(UPLOADS_DIR, filename));
+  const cfg = readJSON(CONFIG_FILE);
+  cfg.galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : [];
+  const url = `/uploads/${filename}`;
+  cfg.galleryImages.push(url);
+  writeJSON(CONFIG_FILE, cfg);
+  res.json({ ok: true, url, galleryImages: cfg.galleryImages });
+});
+
+app.delete('/api/branding/gallery', requireAuth, (req, res) => {
+  const { url } = req.body;
+  const cfg = readJSON(CONFIG_FILE);
+  cfg.galleryImages = (cfg.galleryImages || []).filter((u) => u !== url);
+  writeJSON(CONFIG_FILE, cfg);
+  deleteUploadedFile(url);
+  res.json({ ok: true, galleryImages: cfg.galleryImages });
 });
 
 // Kartenkacheln: manueller ZIP-Upload …
