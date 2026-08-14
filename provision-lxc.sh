@@ -10,17 +10,27 @@ CTID="${1:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
 HOSTNAME="${2:?Usage: ./provision-lxc.sh <CTID> <hostname>}"
 
 STORAGE="local-lvm"
-TEMPLATE_FILE="debian-12-standard_12.7-1_amd64.tar.zst"
-TEMPLATE="local:vztmpl/${TEMPLATE_FILE}"
 BRIDGE="vmbr0"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/common.sh"
 
-if ! pveam list local 2>/dev/null | grep -q "$TEMPLATE_FILE"; then
-  echo "Debian-12-Template fehlt, lade herunter…"
+# Neueste bereits lokal vorhandene Debian-12-Vorlage verwenden — sonst die neueste
+# verfügbare herunterladen. Kein fest verdrahteter Dateiname mehr, der bricht,
+# sobald Proxmox den Standard-Katalog aktualisiert.
+TEMPLATE_FILE="$(pveam list local 2>/dev/null | grep -o 'debian-12-standard_[0-9.-]*_amd64\.tar\.zst' | sort -V | tail -1)"
+
+if [[ -z "$TEMPLATE_FILE" ]]; then
+  echo "Debian-12-Vorlage fehlt, ermittle neueste verfügbare Version…"
   pveam update -q
+  TEMPLATE_FILE="$(pveam available 2>/dev/null | grep -o 'debian-12-standard_[0-9.-]*_amd64\.tar\.zst' | sort -V | tail -1)"
+  if [[ -z "$TEMPLATE_FILE" ]]; then
+    echo "Konnte keine Debian-12-Vorlage im Proxmox-Katalog finden. Manuell prüfen: pveam available"
+    exit 1
+  fi
+  echo "Lade $TEMPLATE_FILE…"
   pveam download local "$TEMPLATE_FILE"
 fi
+TEMPLATE="local:vztmpl/${TEMPLATE_FILE}"
 
 pct create "$CTID" "$TEMPLATE" \
   --hostname "$HOSTNAME" \

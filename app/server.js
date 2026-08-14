@@ -236,6 +236,17 @@ app.delete('/api/exhibitors/:id', requireAuth, (req, res) => {
   res.json({ ok: true });
 });
 
+// Sortiert nach tatsächlicher Uhrzeit (Minuten seit Mitternacht), nicht alphabetisch —
+// sonst landet "9:00" hinter "14:00". Punkte ohne/mit unlesbarer Zeit rutschen ans Ende.
+function timeToMinutes(t) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec((t || '').trim());
+  if (!m) return Infinity;
+  return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+}
+function sortProgram(items) {
+  items.sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+}
+
 // Programm / Angebote des Tages
 app.post('/api/program', requireAuth, (req, res) => {
   const { time, title, description } = req.body;
@@ -243,7 +254,7 @@ app.post('/api/program', requireAuth, (req, res) => {
   const program = readJSON(PROGRAM_FILE);
   const item = { id: crypto.randomUUID(), time: time || '', title, description: description || '' };
   program.items.push(item);
-  program.items.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  sortProgram(program.items);
   writeJSON(PROGRAM_FILE, program);
   res.status(201).json(item);
 });
@@ -256,7 +267,7 @@ app.put('/api/program/:id', requireAuth, (req, res) => {
   if (title) item.title = title;
   if (time !== undefined) item.time = time;
   if (description !== undefined) item.description = description;
-  program.items.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  sortProgram(program.items);
   writeJSON(PROGRAM_FILE, program);
   res.json(item);
 });
