@@ -37,12 +37,25 @@
     logo.hidden = false;
   }
 
-  // Karte
-  const map = L.map('map', { zoomControl: true }).setView(config.center, config.defaultZoom || 17);
+  // Karte — Zoom- und Bereichsgrenzen bewusst auf der Karte selbst setzen (nicht nur
+  // auf dem Tile-Layer): sonst kann man über den Kartenausschnitt hinausscrollen oder
+  // tiefer zoomen als Kacheln vorhanden sind, und sieht Leaflets grauen Leerhintergrund.
+  const mapBounds = L.latLngBounds(config.bounds);
+  const minZoom = config.minZoom || 15;
+  const maxZoom = config.maxZoom || 19;
+
+  const map = L.map('map', {
+    zoomControl: true,
+    minZoom,
+    maxZoom,
+    maxBounds: mapBounds,
+    maxBoundsViscosity: 1.0
+  }).setView(config.center, config.defaultZoom || 17);
+
   L.tileLayer('tiles/{z}/{x}/{y}.png', {
-    minZoom: config.minZoom || 15,
-    maxZoom: config.maxZoom || 19,
-    bounds: L.latLngBounds(config.bounds),
+    minZoom,
+    maxZoom,
+    bounds: mapBounds,
     attribution: '© OpenStreetMap-Mitwirkende'
   }).addTo(map);
 

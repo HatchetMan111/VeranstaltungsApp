@@ -1,4 +1,4 @@
-const CACHE = 'event-cache-v5';
+const CACHE = 'event-cache-v6';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', '/manifest.json',
   'vendor/leaflet.js', 'vendor/leaflet.css',

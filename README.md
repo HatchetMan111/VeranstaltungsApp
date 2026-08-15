@@ -93,7 +93,7 @@ laufendes Event-Dashboard das mitbekommen soll:
 ```bash
 cd /opt/veranstaltungsapp   # oder wo das Repo lokal liegt
 git pull
-./update-lxc.sh <CTID>
+./update-lxc.sh 140         # 140 durch die eigene CTID ersetzen (siehe: pct list)
 ```
 
 Ersetzt nur den Anwendungscode (`server.js`, `public/*.js|css|html`, `admin/*`,
@@ -106,7 +106,7 @@ steht in Proxmox (`pct list`) oder in der Ausgabe vom ursprünglichen Anlegen.
 Einziger Fall, der noch das Terminal braucht:
 
 ```bash
-pct exec <CTID> -- cat /var/www/event/data/admin.json
+pct exec 140 -- cat /var/www/event/data/admin.json   # 140 durch die eigene CTID ersetzen
 ```
 
 ## Cloudflare
