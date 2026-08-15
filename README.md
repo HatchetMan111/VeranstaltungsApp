@@ -85,6 +85,22 @@ Anfrage — bei größeren Bereichen Zoomstufen oder Fläche reduzieren). Für e
 gerenderten Kartenstil bleibt der manuelle ZIP-Upload als Alternative bestehen (z. B. mit
 `planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Struktur `z/x/y.png`).
 
+## Bestehenden Container aktualisieren
+
+Wenn sich der App-Code in diesem Repo weiterentwickelt hat (neue Version) und ein schon
+laufendes Event-Dashboard das mitbekommen soll:
+
+```bash
+cd /opt/veranstaltungsapp   # oder wo das Repo lokal liegt
+git pull
+./update-lxc.sh <CTID>
+```
+
+Ersetzt nur den Anwendungscode (`server.js`, `public/*.js|css|html`, `admin/*`,
+`package.json`), installiert bei Bedarf neue Abhängigkeiten nach und startet den Dienst neu.
+Event-Daten, hochgeladene Bilder und das Kartenkachel-Paket bleiben unangetastet. Die CTID
+steht in Proxmox (`pct list`) oder in der Ausgabe vom ursprünglichen Anlegen.
+
 ## Passwort vergessen?
 
 Einziger Fall, der noch das Terminal braucht:

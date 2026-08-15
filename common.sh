@@ -1,4 +1,4 @@
-# common.sh — von provision-lxc.sh, deploy-event.sh und install.sh eingebunden
+# common.sh — von provision-lxc.sh, update-lxc.sh und install.sh eingebunden
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BOLD='\033[1m'; RESET='\033[0m'
 
 # banner "Titel" "Zeile 1" "Zeile 2" ...
