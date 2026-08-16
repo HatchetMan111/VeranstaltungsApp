@@ -42,6 +42,7 @@ function ensureData() {
       logoUrl: '',
       headerImageUrl: '',
       galleryImages: [],
+      tileApiKey: '',
       center: [51.1657, 10.4515],
       defaultZoom: 6,
       minZoom: 15,
@@ -170,6 +171,7 @@ app.put('/api/config', requireAuth, (req, res) => {
   cfg.logoUrl = cfg.logoUrl || current.logoUrl || '';
   cfg.headerImageUrl = cfg.headerImageUrl || current.headerImageUrl || '';
   cfg.galleryImages = Array.isArray(cfg.galleryImages) ? cfg.galleryImages : (current.galleryImages || []);
+  cfg.tileApiKey = cfg.tileApiKey !== undefined ? cfg.tileApiKey : (current.tileApiKey || '');
   writeJSON(CONFIG_FILE, cfg);
   res.json({ ok: true });
 });
@@ -413,16 +415,22 @@ function tileList(bounds, minZ, maxZ) {
   }
   return tiles;
 }
-function downloadTile(z, x, y) {
+function downloadTile(z, x, y, apiKey) {
   return new Promise((resolve, reject) => {
     const dir = path.join(TILES_DIR, String(z), String(x));
     fs.mkdirSync(dir, { recursive: true });
     const dest = path.join(dir, `${y}.png`);
-    const subdomain = ['a', 'b', 'c'][(x + y) % 3];
-    const url = `https://${subdomain}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+    // MapTiler statt öffentlicher OSM-Kachelserver: die sind für automatisiertes
+    // Massen-Laden nicht vorgesehen (Nutzungsbedingungen) und sperren die IP nach
+    // kurzer Zeit — genau das führte zu fehlenden Kacheln bei höheren Zoomstufen.
+    // MapTiler erlaubt genau diesen Einsatzzweck im kostenlosen Tarif.
+    const url = `https://api.maptiler.com/maps/streets-v2/256/${z}/${x}/${y}.png?key=${encodeURIComponent(apiKey)}`;
     const file = fs.createWriteStream(dest);
-    https.get(url, { headers: { 'User-Agent': 'VeranstaltungsApp-LichtValleyApps/1.0 (+https://lichtvalleyapps.de)' } }, (res) => {
-      if (res.statusCode !== 200) { file.close(); fs.unlink(dest, () => {}); return reject(new Error(`HTTP ${res.statusCode}`)); }
+    https.get(url, (res) => {
+      if (res.statusCode !== 200) {
+        file.close(); fs.unlink(dest, () => {});
+        return reject(new Error(`HTTP ${res.statusCode}`));
+      }
       res.pipe(file);
       file.on('finish', () => file.close(resolve));
     }).on('error', (err) => { file.close(); fs.unlink(dest, () => {}); reject(err); });
@@ -431,6 +439,11 @@ function downloadTile(z, x, y) {
 
 app.post('/api/tiles/download', requireAuth, async (req, res) => {
   const cfg = readJSON(CONFIG_FILE);
+  if (!cfg.tileApiKey) {
+    return res.status(400).json({
+      error: 'Kein MapTiler-API-Key hinterlegt. Kostenlosen Key auf maptiler.com anlegen und unter Einstellungen eintragen.'
+    });
+  }
   const minZ = cfg.minZoom || 15, maxZ = cfg.maxZoom || 19;
   const tiles = tileList(cfg.bounds, minZ, maxZ);
 
@@ -441,15 +454,23 @@ app.post('/api/tiles/download', requireAuth, async (req, res) => {
     return res.status(400).json({ error: `Bereich zu groß (${tiles.length} Kacheln). Kartenausschnitt verkleinern oder Zoomstufen reduzieren.` });
   }
 
-  let downloaded = 0, failed = 0;
+  let downloaded = 0, failed = 0, authFailed = false;
   for (const [z, x, y] of tiles) {
-    try { await downloadTile(z, x, y); downloaded++; } catch { failed++; }
-    await new Promise((r) => setTimeout(r, 40)); // fair zur öffentlichen OSM-Kachelinfrastruktur
+    try {
+      await downloadTile(z, x, y, cfg.tileApiKey);
+      downloaded++;
+    } catch (err) {
+      failed++;
+      if (/HTTP 40[13]/.test(err.message)) authFailed = true;
+    }
+    await new Promise((r) => setTimeout(r, 40));
   }
 
   if (downloaded === 0) {
     return res.status(502).json({
-      error: 'Keine Kachel konnte geladen werden — hat der Container Internetzugriff nach außen?',
+      error: authFailed
+        ? 'MapTiler hat die Anfragen abgelehnt — API-Key prüfen (ungültig oder falsch eingetragen).'
+        : 'Keine Kachel konnte geladen werden — hat der Container Internetzugriff nach außen?',
       downloaded, failed, total: tiles.length
     });
   }

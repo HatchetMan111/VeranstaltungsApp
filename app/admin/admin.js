@@ -61,6 +61,7 @@
       img.src = config.headerImageUrl; img.hidden = false;
     }
     renderGallery();
+    document.getElementById('tile-api-key').value = config.tileApiKey || '';
 
     map.setView(config.center, config.defaultZoom || 17);
     centerMarker.setLatLng(config.center).addTo(map);
@@ -265,6 +266,22 @@
     const data = await res.json();
     if (res.ok) { config.galleryImages = data.galleryImages; renderGallery(); }
   }
+
+  document.getElementById('save-tile-key').addEventListener('click', async () => {
+    const key = document.getElementById('tile-api-key').value.trim();
+    const status = document.getElementById('tile-key-status');
+    try {
+      const res = await fetch('/api/config', {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...config, tileApiKey: key })
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
+      config.tileApiKey = key;
+      setStatus(status, 'Gespeichert.', true);
+    } catch (err) {
+      setStatus(status, err.message, false);
+    }
+  });
 
   // Aussteller-Formular
   function openExhibitorForm(feature) {

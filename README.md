@@ -54,9 +54,9 @@ Unter `http://<IP>/admin` (Login siehe Ausgabe oben) lässt sich bearbeiten:
   erscheint im Formular, sobald der Punkt einmal gespeichert wurde)
 - Programm / Angebote des Tages (Uhrzeit, Titel, Beschreibung — unabhängig von einzelnen
   Ausstellern)
-- Kartenkacheln für den markierten Bereich **automatisch von OpenStreetMap herunterladen**
-  (Alternative: eigenes ZIP hochladen, falls ein individuell gerendertes Kachel-Paket
-  gewünscht ist)
+- Kartenkacheln für den markierten Bereich **automatisch über MapTiler herunterladen**
+  (kostenloser API-Key nötig, siehe unten; Alternative: eigenes ZIP hochladen, falls ein
+  individuell gerendertes Kachel-Paket gewünscht ist)
 - Admin-Passwort ändern — am besten gleich zu Beginn, bevor die Adresse öffentlich
   (z. B. über Cloudflare) erreichbar gemacht wird
 
@@ -78,12 +78,22 @@ Kacheln und alle einmal geladenen Inhalte automatisch für den Offline-Betrieb.
 
 ## Kartenkacheln automatisch laden
 
-Im Dashboard einfach „Kacheln automatisch herunterladen“ klicken, nachdem der Bereich (Südwest-/
-Nordost-Ecke) gesetzt ist. Der Server lädt die passenden Kacheln direkt von den öffentlichen
-OpenStreetMap-Tile-Servern (mit eigenem User-Agent, moderatem Tempo, Obergrenze 3000 Kacheln pro
-Anfrage — bei größeren Bereichen Zoomstufen oder Fläche reduzieren). Für einen individuell
-gerenderten Kartenstil bleibt der manuelle ZIP-Upload als Alternative bestehen (z. B. mit
-`planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Struktur `z/x/y.png`).
+Erst einen kostenlosen API-Key auf [maptiler.com](https://www.maptiler.com/) anlegen (keine
+Kreditkarte nötig, 100.000 Kachel-Abrufe/Monat frei) und im Dashboard unter „Kartenkacheln“
+eintragen. Danach „Kacheln automatisch herunterladen“ klicken, nachdem der Bereich (Südwest-/
+Nordost-Ecke) gesetzt ist — Obergrenze 3000 Kacheln pro Anfrage, bei größeren Bereichen
+Zoomstufen oder Fläche reduzieren.
+
+**Wichtig:** Die öffentlichen OpenStreetMap-Tile-Server (`tile.openstreetmap.org`) sind
+bewusst **nicht** die Quelle — deren Nutzungsbedingungen verbieten automatisiertes
+Massen-Laden, die IP wird nach kurzer Zeit gesperrt oder gedrosselt. Das führte in einer
+früheren Version genau zu dem Bug, dass höhere Zoomstufen (mehr Kacheln pro Fläche) grau
+blieben, weil der Download dort abriss. MapTiler erlaubt Caching für Offline-Nutzung in
+eingebetteten Karten ausdrücklich.
+
+Für einen individuell gerenderten Kartenstil bleibt der manuelle ZIP-Upload als Alternative
+bestehen (z. B. mit `planetiler` oder `tilemaker` aus einem Geofabrik-Auszug, Struktur
+`z/x/y.png`) — dafür ist kein API-Key nötig.
 
 ## Bestehenden Container aktualisieren
 

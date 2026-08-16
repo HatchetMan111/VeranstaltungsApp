@@ -131,7 +131,17 @@
 
   <section id="tiles-section">
     <h2>Kartenkacheln</h2>
-    <p class="hint">Lädt die Kacheln für den oben markierten Bereich automatisch von OpenStreetMap.
+    <label>MapTiler-API-Key
+      <input id="tile-api-key" type="text" placeholder="Kostenlos auf maptiler.com registrieren">
+    </label>
+    <p class="hint">Kostenloser Key auf <a href="https://www.maptiler.com/" target="_blank" rel="noopener">maptiler.com</a>
+      (keine Kreditkarte nötig, 100.000 Kachel-Abrufe/Monat frei). Nötig für den automatischen Download —
+      die öffentlichen OpenStreetMap-Server sind für automatisiertes Massen-Laden nicht vorgesehen und
+      sperren sonst nach kurzer Zeit die IP.</p>
+    <button id="save-tile-key" class="tool">Key speichern</button>
+    <span id="tile-key-status" class="status"></span>
+
+    <p class="hint" style="margin-top:1rem">Lädt die Kacheln für den oben markierten Bereich automatisch über MapTiler.
       Je nach Größe des Bereichs kann das bis zu einer Minute dauern.</p>
     <button id="download-tiles" class="primary">Kacheln automatisch herunterladen</button>
     <span id="tiles-download-status" class="status"></span>
