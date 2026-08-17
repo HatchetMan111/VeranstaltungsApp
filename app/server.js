@@ -404,7 +404,13 @@ function lat2tile(lat, z) {
   return Math.floor((1 - Math.log(Math.tan(rad) + 1 / Math.cos(rad)) / Math.PI) / 2 * 2 ** z);
 }
 function tileList(bounds, minZ, maxZ) {
-  const [[south, west], [north, east]] = bounds;
+  // Min/Max statt Array-Position vertrauen: die beiden Ecken können in beliebiger
+  // Reihenfolge gespeichert sein (Leaflet selbst ist da tolerant, diese Berechnung
+  // muss es explizit auch sein — sonst kommt bei vertauschter Süd/Nord-Reihenfolge
+  // eine leere Kachel-Reihe raus).
+  const [[latA, lonA], [latB, lonB]] = bounds;
+  const south = Math.min(latA, latB), north = Math.max(latA, latB);
+  const west = Math.min(lonA, lonB), east = Math.max(lonA, lonB);
   const tiles = [];
   for (let z = minZ; z <= maxZ; z++) {
     const xMin = lon2tile(west, z), xMax = lon2tile(east, z);

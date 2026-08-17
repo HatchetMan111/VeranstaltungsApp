@@ -1,4 +1,4 @@
-const CACHE = 'event-cache-v6';
+const CACHE = 'event-cache-v7';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', '/manifest.json',
   'vendor/leaflet.js', 'vendor/leaflet.css',
@@ -19,7 +19,9 @@ function lat2tile(lat, z) {
 
 async function tileUrls() {
   const config = await (await fetch('/api/config')).json();
-  const [[south, west], [north, east]] = config.bounds;
+  const [[latA, lonA], [latB, lonB]] = config.bounds;
+  const south = Math.min(latA, latB), north = Math.max(latA, latB);
+  const west = Math.min(lonA, lonB), east = Math.max(lonA, lonB);
   const minZ = config.minZoom || 15, maxZ = config.maxZoom || 19;
   const urls = [];
   for (let z = minZ; z <= maxZ; z++) {
