@@ -93,6 +93,11 @@ main { position: absolute; top: var(--header-height); bottom: var(--nav-height);
 #view-exhibitor-detail .info-description { padding: 0 1.2rem; margin-top: .6rem; }
 .detail-contact { display: flex; flex-direction: column; gap: .5rem; padding: 1rem 1.2rem 0; }
 .detail-contact a { color: var(--accent); font-weight: 600; text-decoration: none; }
+.show-map-btn {
+  display: flex; align-items: center; justify-content: center; gap: .4rem;
+  background: var(--accent); color: #fff; border: none; border-radius: 8px;
+  padding: .7rem; font-size: .95rem; font-weight: 600; cursor: pointer;
+}
 
 #offline-badge {
   position: fixed; bottom: calc(var(--nav-height) + .6rem); left: 50%; transform: translateX(-50%);

@@ -337,14 +337,12 @@
     const status = document.getElementById('ex-status');
     if (!name) { setStatus(status, 'Name fehlt.', false); return; }
     try {
-      let saved;
       if (editingId) {
         const res = await fetch(`/api/exhibitors/${editingId}`, {
           method: 'PUT', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, description, category, offer, branche, website, phone })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
-        saved = await res.json();
       } else {
         if (!pendingLatLng) { setStatus(status, 'Bitte zuerst auf die Karte klicken.', false); return; }
         const res = await fetch('/api/exhibitors', {
@@ -352,14 +350,11 @@
           body: JSON.stringify({ name, description, category, offer, branche, website, phone, lat: pendingLatLng.lat, lng: pendingLatLng.lng })
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
-        saved = await res.json();
       }
       exhibitorsGeo = await (await fetch('/api/exhibitors')).json();
       renderExhibitors();
-      setStatus(status, 'Gespeichert.', true);
-      // Formular bleibt offen, jetzt im Bearbeiten-Modus — so ist direkt danach ein
-      // Bild-Upload möglich, auch wenn der Punkt gerade erst neu angelegt wurde.
-      openExhibitorForm(saved);
+      document.getElementById('exhibitor-form').hidden = true;
+      editingId = null;
       pendingLatLng = null;
     } catch (err) {
       setStatus(status, err.message, false);
@@ -475,13 +470,12 @@
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error((await res.json()).error || 'Fehler');
-      const saved = await res.json();
       programData = await (await fetch('/api/program')).json();
       renderProgram();
-      setStatus(status, 'Gespeichert.', true);
-      // Formular bleibt offen, jetzt im Bearbeiten-Modus — direkt danach ist ein
-      // Bild-Upload möglich, auch wenn der Punkt gerade erst neu angelegt wurde.
-      openProgramForm(saved);
+      document.getElementById('program-form').hidden = true;
+      editingProgramId = null;
+      pendingProgramLatLng = null;
+      setTool(null);
     } catch (err) {
       setStatus(status, err.message, false);
     }

@@ -196,10 +196,12 @@
 
   // Aussteller-Detailseite ("Unternehmensseite")
   let returnView = 'map';
+  let currentDetailId = null;
   function showExhibitorDetail(id) {
     const feature = geo.features.find((f) => f.properties.id === id);
     if (!feature) return;
     const p = feature.properties;
+    currentDetailId = id;
     const active = document.querySelector('.view.active');
     returnView = active ? active.id.replace('view-', '') : 'map';
 
@@ -233,6 +235,13 @@
     showView('exhibitor-detail');
   }
   document.getElementById('detail-back').addEventListener('click', () => showView(returnView));
+  document.getElementById('detail-show-map').addEventListener('click', () => {
+    const marker = markers.get(currentDetailId);
+    if (!marker) return;
+    showView('map');
+    map.setView(marker.getLatLng(), config.maxZoom || 19);
+    marker.openPopup();
+  });
   document.addEventListener('click', (e) => {
     const link = e.target.closest('.open-detail-link');
     if (link) { e.preventDefault(); showExhibitorDetail(link.dataset.id); }
