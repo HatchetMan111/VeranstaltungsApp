@@ -13,7 +13,10 @@ html, body { margin: 0; height: 100%; font-family: system-ui, -apple-system, san
   display: flex; align-items: center; gap: .6rem;
   padding: 0 1rem; background: var(--accent); color: #fff;
 }
-#event-logo { height: 2rem; width: 2rem; border-radius: 6px; object-fit: cover; }
+#header.header-center { justify-content: center; text-align: center; }
+#header.header-stacked { flex-direction: column; justify-content: center; padding: .5rem 1rem; gap: .15rem; }
+#event-logo { height: 2rem; width: 2rem; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+#event-logo.logo-lg { height: 3.4rem; width: 3.4rem; }
 #header h1 { font-size: 1.05rem; margin: 0; }
 
 main { position: absolute; top: var(--header-height); bottom: var(--nav-height); left: 0; right: 0; }

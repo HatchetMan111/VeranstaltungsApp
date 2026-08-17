@@ -51,6 +51,9 @@
     document.getElementById('accentColor').value = config.accentColor || '#c9822b';
     document.getElementById('websiteUrl').value = config.websiteUrl || '';
     document.getElementById('infoText').value = config.infoText || '';
+    document.getElementById('headerCentered').checked = !!config.headerCentered;
+    document.getElementById('headerLogoLarge').checked = !!config.headerLogoLarge;
+    document.getElementById('headerLogoStacked').checked = !!config.headerLogoStacked;
 
     if (config.logoUrl) {
       const img = document.getElementById('logo-preview');
@@ -184,6 +187,9 @@
     config.accentColor = document.getElementById('accentColor').value;
     config.websiteUrl = document.getElementById('websiteUrl').value.trim();
     config.infoText = document.getElementById('infoText').value.trim();
+    config.headerCentered = document.getElementById('headerCentered').checked;
+    config.headerLogoLarge = document.getElementById('headerLogoLarge').checked;
+    config.headerLogoStacked = document.getElementById('headerLogoStacked').checked;
     const status = document.getElementById('settings-status');
     try {
       const res = await fetch('/api/config', {

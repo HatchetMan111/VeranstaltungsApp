@@ -17,6 +17,12 @@ input[type=text], input[type=url], input[type=tel], input[type=time], textarea {
   display: block; width: 100%; max-width: 420px; margin-top: .3rem;
   padding: .5rem .6rem; border: 1px solid #ccc; border-radius: 6px; font-size: .95rem;
 }
+.header-options {
+  border: 1px solid #ddd; border-radius: 8px; padding: .6rem 1rem 1rem; margin: 1rem 0;
+}
+.header-options legend { padding: 0 .4rem; font-weight: 600; font-size: .85rem; color: #555; }
+.checkbox-label { display: flex; align-items: center; gap: .5rem; font-weight: normal; margin: .5rem 0; }
+.checkbox-label input { width: auto; margin: 0; }
 input[type=color] { margin-top: .3rem; width: 60px; height: 34px; border: none; padding: 0; }
 
 .map-tools { display: flex; flex-wrap: wrap; gap: .5rem; margin: .8rem 0; }

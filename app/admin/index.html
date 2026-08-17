@@ -20,6 +20,13 @@
     <label>Webseite-URL (optional)<input id="websiteUrl" type="url" placeholder="https://…"></label>
     <label>Beschreibung (erscheint auf der Info-Seite der App)<textarea id="infoText" rows="4" placeholder="Öffnungszeiten, Adresse, Anfahrt, worum es bei dem Event geht …"></textarea></label>
 
+    <fieldset class="header-options">
+      <legend>Kopfzeile</legend>
+      <label class="checkbox-label"><input id="headerCentered" type="checkbox"> Titel zentrieren</label>
+      <label class="checkbox-label"><input id="headerLogoLarge" type="checkbox"> Logo größer anzeigen</label>
+      <label class="checkbox-label"><input id="headerLogoStacked" type="checkbox"> Logo über dem Titel (statt daneben)</label>
+    </fieldset>
+
     <div class="map-tools">
       <button data-mode="center" class="tool">Kartenmitte setzen</button>
       <button data-mode="sw" class="tool">Ecke Südwest setzen</button>

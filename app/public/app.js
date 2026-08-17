@@ -38,10 +38,18 @@
   document.getElementById('event-title').textContent = config.eventName || 'Event-Karte';
   document.title = config.eventName || 'Event-Karte';
 
+  const header = document.getElementById('header');
+  if (config.headerCentered) header.classList.add('header-center');
+  if (config.headerLogoStacked) {
+    header.classList.add('header-stacked');
+    document.documentElement.style.setProperty('--header-height', config.headerLogoLarge ? '6.2rem' : '5.2rem');
+  }
+
   if (config.logoUrl) {
     const logo = document.getElementById('event-logo');
     logo.src = config.logoUrl;
     logo.hidden = false;
+    if (config.headerLogoLarge) logo.classList.add('logo-lg');
   }
 
   // Karte — Zoom- und Bereichsgrenzen bewusst auf der Karte selbst setzen (nicht nur
@@ -57,7 +65,13 @@
     maxZoom,
     maxBounds: mapBounds,
     maxBoundsViscosity: 1.0
-  }).setView(config.center, config.defaultZoom || 17);
+  });
+  // fitBounds statt setView(center, defaultZoom): passt Zoom und Mittelpunkt automatisch
+  // so an, dass der gesetzte Kartenausschnitt den Bildschirm ausfüllt. Ein falsch
+  // gesetzter defaultZoom (z. B. weit rausgezoomt) führte sonst dazu, dass Leaflet auf
+  // minZoom klemmt, ohne die Ansicht am Ausschnitt auszurichten — Ergebnis war ein
+  // grauer Streifen über der eigentlichen Karte.
+  map.fitBounds(mapBounds);
 
   L.tileLayer('tiles/{z}/{x}/{y}.png', {
     minZoom,
