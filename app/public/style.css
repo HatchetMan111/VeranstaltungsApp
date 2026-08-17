@@ -21,7 +21,7 @@ main { position: absolute; top: var(--header-height); bottom: var(--nav-height);
 .view { position: absolute; inset: 0; overflow-y: auto; background: var(--bg); display: none; }
 .view.active { display: block; }
 #view-map { padding: 0; }
-#view-map, #map { position: absolute; inset: 0; }
+#view-map, #map { position: absolute; inset: 0; touch-action: pan-x pan-y; }
 
 .view h2 {
   margin: 0; padding: 1rem 1.2rem .6rem; font-size: .95rem;

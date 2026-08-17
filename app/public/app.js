@@ -1,4 +1,11 @@
 (async function () {
+  // Natives Seiten-Zoom verhindern: iOS Safari ignoriert "user-scalable=no" bewusst,
+  // macOS-Trackpads mappen Pinch auf Browser-Zoom. Beides umgeht Leaflets eigenes
+  // maxZoom/maxBounds und zeigt dahinter nur vergrößerten, leeren Seiteninhalt (grau).
+  document.addEventListener('gesturestart', (e) => e.preventDefault());
+  document.addEventListener('gesturechange', (e) => e.preventDefault());
+  document.addEventListener('wheel', (e) => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+
   const CATEGORY_ICONS = { wc: '🚻', parkplatz: '🅿️', 'erste-hilfe': '⛑️', buehne: '🎪', info: 'ℹ️', ausgang: '🚪' };
   const FAVORITES_KEY = 'event-favorites';
 
