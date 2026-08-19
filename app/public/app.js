@@ -15,6 +15,33 @@
     }[c]));
   }
 
+  // Leichte, feste Syntax für die Info-Seite: "## " -> Teilüberschrift, "- " -> Liste,
+  // **Text** -> fett, Leerzeile -> Absatzumbruch. Alles wird zuerst escaped, die Syntax
+  // wirkt danach nur noch auf den bereits sicheren Text — keine echten HTML-Tags möglich.
+  function renderInfoText(text) {
+    const lines = escapeHtml(text).split('\n');
+    let html = '';
+    let inList = false;
+    const closeList = () => { if (inList) { html += '</ul>'; inList = false; } };
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (line.startsWith('## ')) {
+        closeList();
+        html += `<h3>${line.slice(3)}</h3>`;
+      } else if (line.startsWith('- ')) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${line.slice(2)}</li>`;
+      } else if (line === '') {
+        closeList();
+      } else {
+        closeList();
+        html += `<p>${line}</p>`;
+      }
+    }
+    closeList();
+    return html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+
   function getFavorites() {
     try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch { return []; }
   }
@@ -184,7 +211,7 @@
   document.getElementById('info-title').textContent = config.eventName || 'Info';
   if (config.infoText) {
     const desc = document.getElementById('info-description');
-    desc.textContent = config.infoText;
+    desc.innerHTML = renderInfoText(config.infoText);
     desc.hidden = false;
   }
   if (config.websiteUrl) {
